@@ -4,7 +4,7 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: microservice_postgres
+    container_name: dona_tutti_postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -17,7 +17,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d/
     networks:
-      - microservice_network
+      - dona_tutti_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -29,7 +29,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: microservice_api
+    container_name: dona_tutti_api
     restart: unless-stopped
     environment:
       DB_HOST: postgres
@@ -45,13 +45,13 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - microservice_network
+      - dona_tutti_network
     volumes:
       - ./logs:/app/logs
 
 # Networks
 networks:
-  microservice_network:
+  dona_tutti_network:
     driver: bridge
 
 # Volumes
