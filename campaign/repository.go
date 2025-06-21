@@ -1,0 +1,116 @@
+package campaign
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+type campaignRepository struct {
+	db *gorm.DB
+}
+
+func NewCampaignRepository(db *gorm.DB) *campaignRepository {
+	return &campaignRepository{
+		db: db,
+	}
+}
+
+func (r *campaignRepository) GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error) {
+	var campaignModel CampaignModel
+	//var categoryName, organizerName string
+
+	// Get the campaign model
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&campaignModel).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return Campaign{}, fmt.Errorf("campaign with id %s not found", id.String())
+		}
+		return Campaign{}, fmt.Errorf("failed to get campaign: %w", err)
+	}
+
+	// Get category name
+	/*err = r.db.WithContext(ctx).
+		Table("campaign_categories").
+		Select("name").
+		Where("id = ?", campaignModel.CategoryID).
+		Scan(&categoryName).Error
+	if err != nil {
+		categoryName = ""
+	}
+
+	// Get organizer name
+	err = r.db.WithContext(ctx).
+		Table("organizers").
+		Select("name").
+		Where("id = ?", campaignModel.OrganizerID).
+		Scan(&organizerName).Error
+	if err != nil {
+		organizerName = ""
+	}*/
+
+	return campaignModel.ToEntity(), nil
+}
+
+func (r *campaignRepository) ListCampaigns(ctx context.Context) ([]Campaign, error) {
+	type Campaigns struct {
+		CampaignModel
+	}
+
+	var campaignModels []Campaigns
+
+	err := r.db.WithContext(ctx).
+		Table("campaigns").
+		Select(`campaigns.*`).
+		Order("campaigns.created_at DESC").
+		Scan(&campaignModels).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list campaigns: %w", err)
+	}
+
+	// Convert to domain entities
+	campaigns := make([]Campaign, len(campaignModels))
+	for i, model := range campaignModels {
+		campaigns[i] = model.CampaignModel.ToEntity()
+	}
+
+	return campaigns, nil
+}
+
+func (r *campaignRepository) CreateCampaign(ctx context.Context, campaign Campaign) error {
+
+	// Convert domain entity to database model
+	var campaignModel CampaignModel
+	campaignModel.FromEntity(campaign)
+
+	// Create the campaign
+	err := r.db.WithContext(ctx).Create(&campaignModel).Error
+	if err != nil {
+		return fmt.Errorf("failed to create campaign: %w", err)
+	}
+
+	return nil
+}
+
+func (r *campaignRepository) GetSummary(ctx context.Context) (Summary, error) {
+	var summary Summary
+
+	err := r.db.WithContext(ctx).
+		Raw(`
+			SELECT 
+				COUNT(DISTINCT c.id) as total_campaigns,
+				COALESCE(SUM(c.goal), 0) as total_goal,
+				COUNT(DISTINCT c.id) as total_contributors
+			FROM campaigns c
+		`).
+		Scan(&summary).Error
+
+	if err != nil {
+		return Summary{}, fmt.Errorf(" to get summary: %w", err)
+	}
+
+	return summary, nil
+}
