@@ -100,12 +100,13 @@ func (r *campaignRepository) GetSummary(ctx context.Context) (Summary, error) {
 
 	err := r.db.WithContext(ctx).
 		Raw(`
-			SELECT 
-				COUNT(DISTINCT c.id) as total_campaigns,
-				COALESCE(SUM(c.goal), 0) as total_goal,
-				COUNT(DISTINCT c.id) as total_contributors
-			FROM campaigns c
-		`).
+                       SELECT
+                               COUNT(DISTINCT c.id) AS total_campaigns,
+                               COALESCE(SUM(c.goal), 0) AS total_goal,
+                               COUNT(DISTINCT d.donor_id) AS total_contributors
+                       FROM campaigns c
+                       LEFT JOIN donations d ON c.id = d.campaign_id
+               `).
 		Scan(&summary).Error
 
 	if err != nil {
