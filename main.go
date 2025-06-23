@@ -11,8 +11,6 @@ import (
 	"microservice_go/donor"
 	"microservice_go/migrations"
 	"microservice_go/organizer"
-	"microservice_go/publishing"
-	"microservice_go/repository"
 	"net/http"
 	"os"
 
@@ -39,10 +37,6 @@ func main() {
 	}
 	defer sqlDB.Close()
 
-	// Article services
-	articleRepo := repository.NewArticlesRepository(db)
-	articleService := publishing.NewService(articleRepo)
-
 	// Campaign services
 	campaignRepo := campaign.NewCampaignRepository(db)
 	campaignService := campaign.NewService(campaignRepo)
@@ -66,7 +60,6 @@ func main() {
 	router := httprouter.New()
 
 	// Register routes
-	publishing.RegisterRoutes(router, articleService)
 	campaign.RegisterRoutes(router, campaignService)
 	campaigncategory.RegisterRoutes(router, categoryService)
 	organizer.RegisterRoutes(router, organizerService)
