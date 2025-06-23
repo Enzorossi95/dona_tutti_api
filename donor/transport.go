@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	apierrors "microservice_go/errors"
+	apierrors "dona_tutti_api/errors"
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/google/uuid"

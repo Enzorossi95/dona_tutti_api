@@ -2,15 +2,16 @@ package main
 
 import (
 	"database/sql"
+	"dona_tutti_api/campaign"
+	"dona_tutti_api/campaigncategory"
+	"dona_tutti_api/database"
+	"dona_tutti_api/donation"
+	"dona_tutti_api/donor"
+	"dona_tutti_api/migrations"
+	"dona_tutti_api/organizer"
+	"dona_tutti_api/user"
 	"fmt"
 	"log"
-	"microservice_go/campaign"
-	"microservice_go/campaigncategory"
-	"microservice_go/database"
-	"microservice_go/donation"
-	"microservice_go/donor"
-	"microservice_go/migrations"
-	"microservice_go/organizer"
 	"net/http"
 	"os"
 
@@ -37,6 +38,10 @@ func main() {
 	}
 	defer sqlDB.Close()
 
+	// User services
+	userRepo := user.NewUserRepository(db)
+	userService := user.NewService(userRepo)
+
 	// Campaign services
 	campaignRepo := campaign.NewCampaignRepository(db)
 	campaignService := campaign.NewService(campaignRepo)
@@ -60,6 +65,7 @@ func main() {
 	router := httprouter.New()
 
 	// Register routes
+	user.RegisterRoutes(router, userService)
 	campaign.RegisterRoutes(router, campaignService)
 	campaigncategory.RegisterRoutes(router, categoryService)
 	organizer.RegisterRoutes(router, organizerService)

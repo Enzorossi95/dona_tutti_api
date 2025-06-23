@@ -1,7 +1,7 @@
 package donation
 
 import (
-	"microservice_go/donor"
+	"dona_tutti_api/donor"
 	"time"
 
 	"github.com/google/uuid"

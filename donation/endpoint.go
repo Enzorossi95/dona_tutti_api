@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	apierrors "microservice_go/errors"
+	apierrors "dona_tutti_api/errors"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
