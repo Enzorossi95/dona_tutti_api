@@ -4,8 +4,9 @@ FROM golang:1.23-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install git (needed for go mod download)
-RUN apk add --no-cache git
+# Install git and required tools
+RUN apk add --no-cache git && \
+    go install github.com/swaggo/swag/cmd/swag@latest
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -15,6 +16,9 @@ RUN go mod download
 
 # Copy source code
 COPY . .
+
+# Generate Swagger documentation
+RUN swag init
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
@@ -33,6 +37,9 @@ COPY --from=builder /app/main .
 
 # Copy migration files
 COPY --from=builder /app/migrations ./migrations
+
+# Copy Swagger docs
+COPY --from=builder /app/docs ./docs
 
 # Expose port
 EXPOSE 9999

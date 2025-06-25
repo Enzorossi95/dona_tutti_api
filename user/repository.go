@@ -13,6 +13,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByResetToken(ctx context.Context, token string) (User, error)
+	ListUsers(ctx context.Context) ([]User, error)
 	CreateUser(ctx context.Context, user User) error
 	UpdateUser(ctx context.Context, user User) error
 	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
@@ -62,6 +63,19 @@ func (r *userRepository) GetUserByResetToken(ctx context.Context, token string) 
 		return User{}, fmt.Errorf("failed to get user: %w", err)
 	}
 	return model.ToEntity(), nil
+}
+
+func (r *userRepository) ListUsers(ctx context.Context) ([]User, error) {
+	var models []UserModel
+	if err := r.db.WithContext(ctx).Find(&models).Error; err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	users := make([]User, len(models))
+	for i, model := range models {
+		users[i] = model.ToEntity()
+	}
+	return users, nil
 }
 
 func (r *userRepository) CreateUser(ctx context.Context, user User) error {

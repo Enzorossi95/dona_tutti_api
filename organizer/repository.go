@@ -8,14 +8,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// Repository implementation
 type organizerRepository struct {
 	db *gorm.DB
 }
 
-func NewOrganizerRepository(db *gorm.DB) *organizerRepository {
-	return &organizerRepository{
-		db: db,
-	}
+// NewOrganizerRepository creates a new organizer repository
+func NewOrganizerRepository(db *gorm.DB) OrganizerRepository {
+	return &organizerRepository{db: db}
 }
 
 func (r *organizerRepository) ListOrganizers(ctx context.Context) ([]Organizer, error) {

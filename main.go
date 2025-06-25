@@ -5,6 +5,7 @@ import (
 	"dona_tutti_api/campaign"
 	"dona_tutti_api/campaigncategory"
 	"dona_tutti_api/database"
+	"dona_tutti_api/docs"
 	"dona_tutti_api/donation"
 	"dona_tutti_api/donor"
 	"dona_tutti_api/migrations"
@@ -12,21 +13,45 @@ import (
 	"dona_tutti_api/user"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	"gorm.io/gorm"
 )
 
+// @title Dona Tutti API
+// @version 1.0
+// @description API for managing donations and campaigns in the Dona Tutti platform
+// @host localhost:9999
+// @BasePath /api
+// @schemes http https
+// @contact.name API Support
+// @contact.email support@donatutti.com
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 func main() {
-	// Configuración de la base de datos
+	// Initialize Swagger docs
+	docs.SwaggerInfo.Title = "Dona Tutti API"
+	docs.SwaggerInfo.Description = "API for managing donations and campaigns in the Dona Tutti platform"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:9999"
+	docs.SwaggerInfo.BasePath = "/api"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
+	// Database setup
 	db, sqlDB, err := setupDatabase()
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Ejecutar migraciones
+	// Run migrations
 	if err := migrations.Up(sqlDB); err != nil {
 		log.Fatal("Failed to run migrations:", err)
 	}
@@ -38,70 +63,68 @@ func main() {
 	}
 	defer sqlDB.Close()
 
-	// User services
+	// Initialize Echo
+	e := echo.New()
+
+	// Middleware
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format:           "[${time_rfc3339}] ${status} ${method} ${uri} - ${latency_human}\n",
+		CustomTimeFormat: time.RFC3339,
+	}))
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
+
+	// Swagger
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	// API Group
+	api := e.Group("/api")
+
+	// Initialize services
 	userRepo := user.NewUserRepository(db)
 	userService := user.NewService(userRepo)
 
-	// Campaign services
 	campaignRepo := campaign.NewCampaignRepository(db)
 	campaignService := campaign.NewService(campaignRepo)
 
-	// Category services
 	categoryRepo := campaigncategory.NewCategoryRepository(db)
 	categoryService := campaigncategory.NewService(categoryRepo)
 
-	// Organizer services
 	organizerRepo := organizer.NewOrganizerRepository(db)
 	organizerService := organizer.NewService(organizerRepo)
 
-	// Donor services
 	donorRepo := donor.NewDonorRepository(db)
 	donorService := donor.NewService(donorRepo)
 
-	// Donation services
 	donationRepo := donation.NewDonationRepository(db)
 	donationService := donation.NewService(donationRepo)
 
-	router := httprouter.New()
-
 	// Register routes
-	user.RegisterRoutes(router, userService)
-	campaign.RegisterRoutes(router, campaignService)
-	campaigncategory.RegisterRoutes(router, categoryService)
-	organizer.RegisterRoutes(router, organizerService)
-	donor.RegisterRoutes(router, donorService)
-	donation.RegisterRoutes(router, donationService)
+	user.RegisterRoutes(api, userService)
+	campaign.RegisterRoutes(api, campaignService)
+	campaigncategory.RegisterRoutes(api, categoryService)
+	organizer.RegisterRoutes(api, organizerService)
+	donor.RegisterRoutes(api, donorService)
+	donation.RegisterRoutes(api, donationService)
 
-	// Configurar CORS globalmente
-	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Access-Control-Request-Method") != "" {
-			// Set CORS headers
-			header := w.Header()
-			header.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			header.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			header.Set("Access-Control-Allow-Origin", "*")
-		}
-		// Adjust status code to 204
-		w.WriteHeader(http.StatusNoContent)
-	})
-
+	// Start server
 	port := os.Getenv("API_PORT")
 	if port == "" {
 		port = "9999"
 	}
 
-	fmt.Printf("🚀 Hot Reload funcionando! Servidor escuchando en puerto :%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	fmt.Printf("\n🚀 Server running on port :%s\n", port)
+	fmt.Printf("📚 Swagger documentation available at http://localhost:%s/swagger/index.html\n", port)
+	fmt.Printf("🌐 API Base URL: http://localhost:%s/api\n\n", port)
+	log.Fatal(e.Start(":" + port))
 }
 
 func setupDatabase() (*gorm.DB, *sql.DB, error) {
-	// Tu configuración actual de la base de datos con GORM
 	gormDB, err := database.Connect()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Obtener la conexión SQL subyacente
 	sqlDB, err := gormDB.DB()
 	if err != nil {
 		return nil, nil, err

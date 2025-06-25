@@ -17,14 +17,16 @@ import (
 const (
 	tokenExpiration      = 24 * time.Hour
 	resetTokenExpiration = 1 * time.Hour
-	jwtSecret            = "your-secret-key" // TODO: Move to environment variable
+	jwtSecret            = "your-secret-key"
 )
 
 type Service interface {
 	Register(ctx context.Context, email, password, firstName, lastName string) (uuid.UUID, error)
 	Login(ctx context.Context, email, password string) (*AuthToken, error)
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
-	UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) error
+	ListUsers(ctx context.Context) ([]User, error)
+	CreateUser(ctx context.Context, dto RegisterDTO) (uuid.UUID, error)
+	UpdateUser(ctx context.Context, id uuid.UUID, dto UpdateUserDTO) error
 	UpdatePassword(ctx context.Context, id uuid.UUID, currentPassword, newPassword string) error
 	RequestPasswordReset(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
@@ -121,14 +123,22 @@ func (s *service) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 	return s.repo.GetUserByID(ctx, id)
 }
 
-func (s *service) UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) error {
+func (s *service) ListUsers(ctx context.Context) ([]User, error) {
+	return s.repo.ListUsers(ctx)
+}
+
+func (s *service) CreateUser(ctx context.Context, dto RegisterDTO) (uuid.UUID, error) {
+	return s.Register(ctx, dto.Email, dto.Password, dto.FirstName, dto.LastName)
+}
+
+func (s *service) UpdateUser(ctx context.Context, id uuid.UUID, dto UpdateUserDTO) error {
 	user, err := s.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	user.FirstName = firstName
-	user.LastName = lastName
+	user.FirstName = dto.FirstName
+	user.LastName = dto.LastName
 	user.UpdatedAt = time.Now()
 
 	return s.repo.UpdateUser(ctx, user)

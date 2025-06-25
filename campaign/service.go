@@ -10,6 +10,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type Service interface {
+	GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error)
+	ListCampaigns(ctx context.Context) ([]Campaign, error)
+	CreateCampaign(ctx context.Context, campaign Campaign) (uuid.UUID, error)
+	GetSummary(ctx context.Context) (Summary, error)
+}
+
 type CampaignRepository interface {
 	GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error)
 	ListCampaigns(ctx context.Context) ([]Campaign, error)
@@ -21,7 +28,7 @@ type service struct {
 	repo CampaignRepository
 }
 
-func NewService(repo CampaignRepository) *service {
+func NewService(repo CampaignRepository) Service {
 	return &service{repo: repo}
 }
 

@@ -6,6 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type Service interface {
+	ListCategories(ctx context.Context) ([]CampaignCategory, error)
+	GetCategory(ctx context.Context, id uuid.UUID) (CampaignCategory, error)
+}
+
 type CategoryRepository interface {
 	ListCategories(ctx context.Context) ([]CampaignCategory, error)
 	GetCategory(ctx context.Context, id uuid.UUID) (CampaignCategory, error)
@@ -15,7 +20,7 @@ type service struct {
 	repo CategoryRepository
 }
 
-func NewService(repo CategoryRepository) *service {
+func NewService(repo CategoryRepository) Service {
 	return &service{repo: repo}
 }
 

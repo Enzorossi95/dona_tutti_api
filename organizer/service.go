@@ -6,6 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type Service interface {
+	ListOrganizers(ctx context.Context) ([]Organizer, error)
+	GetOrganizer(ctx context.Context, id uuid.UUID) (Organizer, error)
+}
+
 type OrganizerRepository interface {
 	ListOrganizers(ctx context.Context) ([]Organizer, error)
 	GetOrganizer(ctx context.Context, id uuid.UUID) (Organizer, error)
@@ -15,7 +20,7 @@ type service struct {
 	repo OrganizerRepository
 }
 
-func NewService(repo OrganizerRepository) *service {
+func NewService(repo OrganizerRepository) Service {
 	return &service{repo: repo}
 }
 
