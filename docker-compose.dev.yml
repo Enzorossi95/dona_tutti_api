@@ -13,6 +13,7 @@ services:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d/
     networks:
       - dona_tutti_network_dev
     healthcheck:

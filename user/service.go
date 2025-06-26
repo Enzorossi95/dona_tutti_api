@@ -8,6 +8,7 @@ import (
 	"time"
 
 	apierrors "dona_tutti_api/errors"
+	"dona_tutti_api/rbac"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -67,6 +68,7 @@ func (s *service) Register(ctx context.Context, email, password, firstName, last
 		ID:           uuid.New(),
 		Email:        email,
 		PasswordHash: string(hashedPassword),
+		RoleID:       rbac.GuestRoleID, // Default role for new users
 		FirstName:    firstName,
 		LastName:     lastName,
 		IsActive:     true,
@@ -82,7 +84,7 @@ func (s *service) Register(ctx context.Context, email, password, firstName, last
 }
 
 func (s *service) Login(ctx context.Context, email, password string) (*AuthToken, error) {
-	user, err := s.repo.GetUserByEmail(ctx, email)
+	user, roleName, err := s.repo.GetUserByEmailWithRole(ctx, email)
 	if err != nil {
 		return nil, apierrors.NewValidationError("invalid email or password")
 	}
@@ -95,10 +97,12 @@ func (s *service) Login(ctx context.Context, email, password string) (*AuthToken
 		return nil, apierrors.NewValidationError("invalid email or password")
 	}
 
-	// Generate JWT token
+	// Generate JWT token with role information
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID.String(),
-		"exp": time.Now().Add(tokenExpiration).Unix(),
+		"sub":     user.ID.String(),
+		"role_id": user.RoleID.String(),
+		"role":    roleName,
+		"exp":     time.Now().Add(tokenExpiration).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(jwtSecret))

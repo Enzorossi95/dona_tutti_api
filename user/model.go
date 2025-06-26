@@ -11,6 +11,7 @@ type UserModel struct {
 	ID                uuid.UUID  `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
 	Email             string     `gorm:"uniqueIndex;not null"`
 	PasswordHash      string     `gorm:"column:password_hash;not null"`
+	RoleID            uuid.UUID  `gorm:"column:role_id;not null"`
 	FirstName         string     `gorm:"column:first_name"`
 	LastName          string     `gorm:"column:last_name"`
 	IsActive          bool       `gorm:"column:is_active;default:true"`
@@ -33,6 +34,7 @@ func (m UserModel) ToEntity() User {
 		ID:                m.ID,
 		Email:             m.Email,
 		PasswordHash:      m.PasswordHash,
+		RoleID:            m.RoleID,
 		FirstName:         m.FirstName,
 		LastName:          m.LastName,
 		IsActive:          m.IsActive,
@@ -50,6 +52,7 @@ func (m *UserModel) FromEntity(entity User) {
 	m.ID = entity.ID
 	m.Email = entity.Email
 	m.PasswordHash = entity.PasswordHash
+	m.RoleID = entity.RoleID
 	m.FirstName = entity.FirstName
 	m.LastName = entity.LastName
 	m.IsActive = entity.IsActive

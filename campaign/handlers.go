@@ -1,6 +1,7 @@
 package campaign
 
 import (
+	"dona_tutti_api/middleware"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -15,17 +16,32 @@ func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
-// RegisterRoutes registers all campaign routes
-func RegisterRoutes(g *echo.Group, service Service) {
+// RegisterRoutes registers all campaign routes with RBAC authorization
+func RegisterRoutes(g *echo.Group, service Service, rbacService middleware.RBACService) {
 	handler := NewHandler(service)
+	rbacMiddleware := middleware.NewRBACMiddleware(rbacService)
 
 	// Campaign routes
 	campaignGroup := g.Group("/campaigns")
-	campaignGroup.GET("", handler.ListCampaigns)
+
+	// Public routes (no authentication required)
 	campaignGroup.GET("/:id", handler.GetCampaign)
-	campaignGroup.POST("", handler.CreateCampaign)
-	campaignGroup.PUT("/:id", handler.UpdateCampaign)
-	campaignGroup.DELETE("/:id", handler.DeleteCampaign)
+
+	// Protected routes with authentication
+	authGroup := campaignGroup.Group("", middleware.RequireAuth())
+
+	// Admin-only routes
+	adminGroup := authGroup.Group("", rbacMiddleware.RequireRole("admin"))
+	adminGroup.POST("", handler.CreateCampaign)
+	adminGroup.DELETE("/:id", handler.DeleteCampaign)
+	adminGroup.GET("", handler.ListCampaigns)
+
+	// Admin or owner routes (using Combine for OR logic)
+	adminOrOwnerGroup := authGroup.Group("", rbacMiddleware.Combine(
+		rbacMiddleware.RequireRole("admin"),
+		rbacMiddleware.RequireOwnership(),
+	))
+	adminOrOwnerGroup.PUT("/:id", handler.UpdateCampaign)
 }
 
 // @Summary List all campaigns

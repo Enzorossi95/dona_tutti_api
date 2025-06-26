@@ -10,6 +10,7 @@ import (
 	"dona_tutti_api/donor"
 	"dona_tutti_api/migrations"
 	"dona_tutti_api/organizer"
+	"dona_tutti_api/rbac"
 	"dona_tutti_api/user"
 	"fmt"
 	"log"
@@ -99,13 +100,18 @@ func main() {
 	donationRepo := donation.NewDonationRepository(db)
 	donationService := donation.NewService(donationRepo)
 
+	// Initialize RBAC service
+	rbacRepo := rbac.NewRepository(db)
+	rbacService := rbac.NewService(rbacRepo)
+
 	// Register routes
 	user.RegisterRoutes(api, userService)
-	campaign.RegisterRoutes(api, campaignService)
+	campaign.RegisterRoutes(api, campaignService, rbacService)
 	campaigncategory.RegisterRoutes(api, categoryService)
 	organizer.RegisterRoutes(api, organizerService)
 	donor.RegisterRoutes(api, donorService)
 	donation.RegisterRoutes(api, donationService)
+	rbac.RegisterRoutes(api, rbacService)
 
 	// Start server
 	port := os.Getenv("API_PORT")

@@ -11,6 +11,7 @@ type User struct {
 	ID                uuid.UUID  `json:"id"`
 	Email             string     `json:"email"`
 	PasswordHash      string     `json:"-"` // Never expose password hash
+	RoleID            uuid.UUID  `json:"role_id"`
 	FirstName         string     `json:"first_name,omitempty"`
 	LastName          string     `json:"last_name,omitempty"`
 	IsActive          bool       `json:"is_active"`

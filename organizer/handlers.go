@@ -23,14 +23,21 @@ func RegisterRoutes(g *echo.Group, service Service) {
 	// Organizer routes
 	organizerGroup := g.Group("/organizers")
 
-	// Public routes (if any)
-	organizerGroup.GET("", handler.ListOrganizers) // Keeping this public for now
+	// Public routes (read-only access for everyone)
+	organizerGroup.GET("", handler.ListOrganizers)
+	organizerGroup.GET("/:id", handler.GetOrganizer)
 
-	// Protected routes
-	protected := organizerGroup.Group("", middleware.RequireAuth())
-	protected.GET("/:id", handler.GetOrganizer)
-	protected.POST("", handler.CreateOrganizer)
-	protected.PUT("/:id", handler.UpdateOrganizer)
+	// Protected routes requiring authentication and admin role
+	authGroup := organizerGroup.Group("", middleware.RequireAuth())
+
+	// Note: RBAC middleware would be initialized here when fully integrated
+	// For now, these routes require authentication but not specific roles
+	// TODO: Add rbacMiddleware := middleware.NewRBACMiddleware(db.(*gorm.DB))
+	// TODO: Add rbacMiddleware.RequireRole("admin") to the routes below
+
+	// Admin-only routes (authentication required, admin role to be added)
+	authGroup.POST("", handler.CreateOrganizer)    // Future: Admin only
+	authGroup.PUT("/:id", handler.UpdateOrganizer) // Future: Admin only
 }
 
 // @Summary List all organizers

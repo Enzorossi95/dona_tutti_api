@@ -122,6 +122,56 @@ definitions:
       verified:
         type: boolean
     type: object
+  rbac.CheckPermissionRequest:
+    properties:
+      permission:
+        type: string
+    required:
+    - permission
+    type: object
+  rbac.LocalAuthContext:
+    properties:
+      permissions:
+        items:
+          type: string
+        type: array
+      role_id:
+        type: string
+      role_name:
+        type: string
+      user_id:
+        type: string
+    type: object
+  rbac.Permission:
+    properties:
+      action:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      resource:
+        type: string
+    type: object
+  rbac.Role:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
   user.AuthToken:
     properties:
       access_token:
@@ -223,6 +273,8 @@ definitions:
         type: string
       last_name:
         type: string
+      role_id:
+        type: string
       updated_at:
         type: string
     type: object
@@ -265,6 +317,40 @@ paths:
       summary: List donations by campaign
       tags:
       - donations
+  /auth/check-permission:
+    get:
+      consumes:
+      - application/json
+      description: Check if the current user has a specific permission
+      parameters:
+      - description: Permission check request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.CheckPermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      security:
+      - BearerAuth: []
+      summary: Check user permission
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:
@@ -363,6 +449,28 @@ paths:
           schema:
             $ref: '#/definitions/errors.APIError'
       summary: Register a new user
+      tags:
+      - auth
+  /auth/user-context:
+    get:
+      consumes:
+      - application/json
+      description: Get the current user's authentication context including role and
+        permissions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rbac.LocalAuthContext'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get user context
       tags:
       - auth
   /campaigns:
@@ -888,6 +996,95 @@ paths:
       summary: Update organizer details
       tags:
       - organizers
+  /permissions:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all permissions in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/rbac.Permission'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.APIError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      security:
+      - BearerAuth: []
+      summary: List all permissions
+      tags:
+      - permissions
+  /roles:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all active roles in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/rbac.Role'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.APIError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      security:
+      - BearerAuth: []
+      summary: List all roles
+      tags:
+      - roles
+  /roles/{name}:
+    get:
+      consumes:
+      - application/json
+      description: Get role details by role name
+      parameters:
+      - description: Role name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rbac.Role'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.APIError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get role by name
+      tags:
+      - roles
   /users:
     get:
       consumes:

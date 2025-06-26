@@ -60,6 +60,14 @@ func RequireAuth() echo.MiddlewareFunc {
 
 			// Store user info in context
 			c.Set("user_id", claims["sub"])
+			
+			// Store additional claims for RBAC
+			if roleID, ok := claims["role_id"]; ok {
+				c.Set("role_id", roleID)
+			}
+			if roleName, ok := claims["role"]; ok {
+				c.Set("role", roleName)
+			}
 
 			return next(c)
 		}
