@@ -201,6 +201,32 @@ definitions:
       token:
         $ref: '#/definitions/user.AuthToken'
     type: object
+  user.MeResponseDTO:
+    properties:
+      created_at:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      email:
+        example: user@email.com
+        type: string
+      first_name:
+        example: Juan
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      last_name:
+        example: Pérez
+        type: string
+      role:
+        $ref: '#/definitions/user.RoleInfo'
+      updated_at:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+    type: object
   user.RegisterDTO:
     properties:
       email:
@@ -235,6 +261,15 @@ definitions:
         type: string
       token:
         example: reset-token-123
+        type: string
+    type: object
+  user.RoleInfo:
+    properties:
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      name:
+        example: admin
         type: string
     type: object
   user.UpdatePasswordDTO:
@@ -1211,6 +1246,31 @@ paths:
           schema:
             $ref: '#/definitions/errors.APIError'
       summary: Update user password
+      tags:
+      - users
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Get current authenticated user's details including role information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.MeResponseDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      security:
+      - BearerAuth: []
+      summary: Get current user details
       tags:
       - users
 schemes:

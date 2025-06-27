@@ -25,6 +25,7 @@ type Service interface {
 	Register(ctx context.Context, email, password, firstName, lastName string) (uuid.UUID, error)
 	Login(ctx context.Context, email, password string) (*AuthToken, error)
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
+	GetMe(ctx context.Context, id uuid.UUID) (MeResponseDTO, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	CreateUser(ctx context.Context, dto RegisterDTO) (uuid.UUID, error)
 	UpdateUser(ctx context.Context, id uuid.UUID, dto UpdateUserDTO) error
@@ -125,6 +126,29 @@ func (s *service) Login(ctx context.Context, email, password string) (*AuthToken
 
 func (s *service) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 	return s.repo.GetUserByID(ctx, id)
+}
+
+func (s *service) GetMe(ctx context.Context, id uuid.UUID) (MeResponseDTO, error) {
+	user, roleName, roleID, err := s.repo.GetUserByIDWithRole(ctx, id)
+	if err != nil {
+		return MeResponseDTO{}, err
+	}
+
+	response := MeResponseDTO{
+		ID:        user.ID,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Role: RoleInfo{
+			ID:   roleID,
+			Name: roleName,
+		},
+		IsActive:  user.IsActive,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}
+
+	return response, nil
 }
 
 func (s *service) ListUsers(ctx context.Context) ([]User, error) {

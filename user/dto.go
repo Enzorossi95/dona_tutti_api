@@ -1,6 +1,10 @@
 package user
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // RegisterDTO represents the request body for user registration
 type RegisterDTO struct {
@@ -34,6 +38,24 @@ type GetUserDTO struct {
 // GetUserResponseDTO represents the response for getting a user
 type GetUserResponseDTO struct {
 	User User `json:"user"`
+}
+
+// RoleInfo represents role information in the me response
+type RoleInfo struct {
+	ID   uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Name string    `json:"name" example:"admin"`
+}
+
+// MeResponseDTO represents the response for the /me endpoint
+type MeResponseDTO struct {
+	ID        uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Email     string    `json:"email" example:"user@email.com"`
+	FirstName string    `json:"first_name" example:"Juan"`
+	LastName  string    `json:"last_name" example:"Pérez"`
+	Role      RoleInfo  `json:"role"`
+	IsActive  bool      `json:"is_active" example:"true"`
+	CreatedAt time.Time `json:"created_at" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt time.Time `json:"updated_at" example:"2024-01-01T00:00:00Z"`
 }
 
 // UpdateUserDTO represents the request body for updating a user

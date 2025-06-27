@@ -51,8 +51,6 @@ services:
         apk add --no-cache git &&
         go mod download &&
         go install github.com/air-verse/air@latest &&
-        go install github.com/swaggo/swag/cmd/swag@latest &&
-        swag init &&
         air
       "
 

@@ -1,6 +1,7 @@
 package user
 
 import (
+	"dona_tutti_api/middleware"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -33,6 +34,10 @@ func RegisterRoutes(g *echo.Group, service Service) {
 	userGroup.POST("", handler.CreateUser)
 	userGroup.PUT("/:id", handler.UpdateUser)
 	userGroup.PUT("/:id/password", handler.UpdatePassword)
+
+	// Protected user routes (require authentication)
+	protectedUserGroup := userGroup.Group("", middleware.RequireAuth())
+	protectedUserGroup.GET("/me", handler.GetMe)
 }
 
 // @Summary Register a new user
@@ -250,4 +255,34 @@ func (h *Handler) ResetPassword(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusOK)
+}
+
+// @Summary Get current user details
+// @Description Get current authenticated user's details including role information
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} MeResponseDTO
+// @Failure 401 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
+// @Router /users/me [get]
+func (h *Handler) GetMe(c echo.Context) error {
+	// Get user ID from context (set by auth middleware)
+	userIDValue := c.Get("user_id")
+	if userIDValue == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+
+	userID, err := uuid.Parse(userIDValue.(string))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID")
+	}
+
+	userMe, err := h.service.GetMe(c.Request().Context(), userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get user information")
+	}
+
+	return c.JSON(http.StatusOK, userMe)
 }

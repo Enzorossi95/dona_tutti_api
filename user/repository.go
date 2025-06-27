@@ -13,6 +13,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByEmailWithRole(ctx context.Context, email string) (User, string, error)
+	GetUserByIDWithRole(ctx context.Context, id uuid.UUID) (User, string, uuid.UUID, error)
 	GetUserByResetToken(ctx context.Context, token string) (User, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	CreateUser(ctx context.Context, user User) error
@@ -166,4 +167,28 @@ func (r *userRepository) GetUserByEmailWithRole(ctx context.Context, email strin
 	}
 
 	return result.UserModel.ToEntity(), result.RoleName, nil
+}
+
+func (r *userRepository) GetUserByIDWithRole(ctx context.Context, id uuid.UUID) (User, string, uuid.UUID, error) {
+	var result struct {
+		UserModel
+		RoleName string    `gorm:"column:role_name"`
+		RoleID   uuid.UUID `gorm:"column:role_id"`
+	}
+
+	query := `
+		SELECT u.*, r.name as role_name, r.id as role_id
+		FROM users u
+		INNER JOIN roles r ON u.role_id = r.id
+		WHERE u.id = ? AND r.is_active = true
+	`
+
+	if err := r.db.WithContext(ctx).Raw(query, id).Scan(&result).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return User{}, "", uuid.UUID{}, fmt.Errorf("user not found")
+		}
+		return User{}, "", uuid.UUID{}, fmt.Errorf("failed to get user with role: %w", err)
+	}
+
+	return result.UserModel.ToEntity(), result.RoleName, result.RoleID, nil
 }
