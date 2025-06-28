@@ -13,7 +13,6 @@ const (
 	PaymentMethodMercadoPago   PaymentMethod = "MercadoPago"
 	PaymentMethodTransferencia PaymentMethod = "Transferencia"
 	PaymentMethodEfectivo      PaymentMethod = "Efectivo"
-	PaymentMethodTarjeta       PaymentMethod = "Tarjeta"
 )
 
 const (

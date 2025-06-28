@@ -83,7 +83,6 @@ func main() {
 
 	// Initialize services
 	userRepo := user.NewUserRepository(db)
-	userService := user.NewService(userRepo)
 
 	campaignRepo := campaign.NewCampaignRepository(db)
 	campaignService := campaign.NewService(campaignRepo)
@@ -93,6 +92,9 @@ func main() {
 
 	organizerRepo := organizer.NewOrganizerRepository(db)
 	organizerService := organizer.NewService(organizerRepo)
+
+	// User service needs organizer service as dependency
+	userService := user.NewService(userRepo, organizerService)
 
 	donorRepo := donor.NewDonorRepository(db)
 	donorService := donor.NewService(donorRepo)

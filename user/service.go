@@ -8,6 +8,7 @@ import (
 	"time"
 
 	apierrors "dona_tutti_api/errors"
+	"dona_tutti_api/organizer"
 	"dona_tutti_api/rbac"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -35,11 +36,15 @@ type Service interface {
 }
 
 type service struct {
-	repo UserRepository
+	repo             UserRepository
+	organizerService organizer.Service
 }
 
-func NewService(repo UserRepository) Service {
-	return &service{repo: repo}
+func NewService(repo UserRepository, organizerService organizer.Service) Service {
+	return &service{
+		repo:             repo,
+		organizerService: organizerService,
+	}
 }
 
 func (s *service) Register(ctx context.Context, email, password, firstName, lastName string) (uuid.UUID, error) {
@@ -79,6 +84,21 @@ func (s *service) Register(ctx context.Context, email, password, firstName, last
 
 	if err := s.repo.CreateUser(ctx, user); err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Create associated organizer using injected service
+	organizerEntity := organizer.Organizer{
+		ID:       uuid.New(),
+		UserID:   user.ID,
+		Name:     user.FirstName + " " + user.LastName,
+		Avatar:   "",
+		Verified: false,
+	}
+	fmt.Println("organizerEntity", organizerEntity)
+
+	_, err = s.organizerService.CreateOrganizer(ctx, organizerEntity)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to create organizer: %w", err)
 	}
 
 	return user.ID, nil

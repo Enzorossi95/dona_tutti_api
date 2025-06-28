@@ -41,15 +41,28 @@ func RegisterRoutes(g *echo.Group, service Service) {
 }
 
 // @Summary List all organizers
-// @Description Get a list of all organizers
+// @Description Get a list of all organizers, optionally filtered by user_id
 // @Tags organizers
 // @Accept json
 // @Produce json
+// @Param user_id query string false "Filter organizers by user ID"
 // @Success 200 {array} Organizer
 // @Failure 400 {object} errors.APIError
 // @Router /organizers [get]
 func (h *Handler) ListOrganizers(c echo.Context) error {
-	organizers, err := h.service.ListOrganizers(c.Request().Context())
+	var userID *uuid.UUID
+
+	// Extract user_id query parameter if provided
+	userIDParam := c.QueryParam("user_id")
+	if userIDParam != "" {
+		parsedUserID, err := uuid.Parse(userIDParam)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid user_id format")
+		}
+		userID = &parsedUserID
+	}
+
+	organizers, err := h.service.ListOrganizers(c.Request().Context(), userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -95,8 +108,17 @@ func (h *Handler) GetOrganizer(c echo.Context) error {
 // @Failure 400 {object} errors.APIError
 // @Router /organizers [post]
 func (h *Handler) CreateOrganizer(c echo.Context) error {
-	// Implementation of CreateOrganizer method
-	return nil // Placeholder return, actual implementation needed
+	var organizer Organizer
+	if err := c.Bind(&organizer); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	createdOrganizer, err := h.service.CreateOrganizer(c.Request().Context(), organizer)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, createdOrganizer)
 }
 
 // @Summary Update organizer details
@@ -110,6 +132,21 @@ func (h *Handler) CreateOrganizer(c echo.Context) error {
 // @Failure 400 {object} errors.APIError
 // @Router /organizers/{id} [put]
 func (h *Handler) UpdateOrganizer(c echo.Context) error {
-	// Implementation of UpdateOrganizer method
-	return nil // Placeholder return, actual implementation needed
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid organizer ID")
+	}
+
+	var organizer Organizer
+	if err := c.Bind(&organizer); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request format")
+	}
+
+	organizer.ID = id
+	err = h.service.UpdateOrganizer(c.Request().Context(), organizer)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, organizer)
 }

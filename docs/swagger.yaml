@@ -78,13 +78,11 @@ definitions:
     - MercadoPago
     - Transferencia
     - Efectivo
-    - Tarjeta
     type: string
     x-enum-varnames:
     - PaymentMethodMercadoPago
     - PaymentMethodTransferencia
     - PaymentMethodEfectivo
-    - PaymentMethodTarjeta
   donor.Donor:
     properties:
       email:
@@ -118,6 +116,8 @@ definitions:
       id:
         type: string
       name:
+        type: string
+      user_id:
         type: string
       verified:
         type: boolean
@@ -930,7 +930,12 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a list of all organizers
+      description: Get a list of all organizers, optionally filtered by user_id
+      parameters:
+      - description: Filter organizers by user ID
+        in: query
+        name: user_id
+        type: string
       produces:
       - application/json
       responses:

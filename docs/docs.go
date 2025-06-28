@@ -940,7 +940,7 @@ const docTemplate = `{
         },
         "/organizers": {
             "get": {
-                "description": "Get a list of all organizers",
+                "description": "Get a list of all organizers, optionally filtered by user_id",
                 "consumes": [
                     "application/json"
                 ],
@@ -951,6 +951,14 @@ const docTemplate = `{
                     "organizers"
                 ],
                 "summary": "List all organizers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter organizers by user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1589,14 +1597,12 @@ const docTemplate = `{
             "enum": [
                 "MercadoPago",
                 "Transferencia",
-                "Efectivo",
-                "Tarjeta"
+                "Efectivo"
             ],
             "x-enum-varnames": [
                 "PaymentMethodMercadoPago",
                 "PaymentMethodTransferencia",
-                "PaymentMethodEfectivo",
-                "PaymentMethodTarjeta"
+                "PaymentMethodEfectivo"
             ]
         },
         "donor.Donor": {
@@ -1648,6 +1654,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 },
                 "verified": {
