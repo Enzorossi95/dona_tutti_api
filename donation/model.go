@@ -7,19 +7,27 @@ import (
 	"github.com/google/uuid"
 )
 
+// PaymentMethodModel represents payment method info for donations
+type PaymentMethodModel struct {
+	ID   int    `gorm:"column:id"`
+	Code string `gorm:"column:code"`
+	Name string `gorm:"column:name"`
+}
+
 type DonationModel struct {
-	ID            uuid.UUID        `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
-	CampaignID    uuid.UUID        `gorm:"column:campaign_id;type:uuid;not null"`
-	Amount        float64          `gorm:"column:amount;not null"`
-	DonorID       uuid.UUID        `gorm:"column:donor_id;type:uuid;not null"`
-	Date          time.Time        `gorm:"column:date;not null"`
-	Message       *string          `gorm:"column:message"`
-	IsAnonymous   bool             `gorm:"column:is_anonymous"`
-	PaymentMethod PaymentMethod    `gorm:"column:payment_method;type:varchar(20);not null"`
-	Status        DonationStatus   `gorm:"column:status;type:varchar(20);not null"`
-	CreatedAt     time.Time        `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt     time.Time        `gorm:"column:updated_at;autoUpdateTime"`
-	Donor         donor.DonorModel `gorm:"foreignKey:DonorID"`
+	ID              uuid.UUID           `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
+	CampaignID      uuid.UUID           `gorm:"column:campaign_id;type:uuid;not null"`
+	Amount          float64             `gorm:"column:amount;not null"`
+	DonorID         uuid.UUID           `gorm:"column:donor_id;type:uuid;not null"`
+	Date            time.Time           `gorm:"column:date;not null"`
+	Message         *string             `gorm:"column:message"`
+	IsAnonymous     bool                `gorm:"column:is_anonymous"`
+	PaymentMethodID int                 `gorm:"column:payment_method_id;not null"`
+	Status          DonationStatus      `gorm:"column:status;type:varchar(20);not null"`
+	CreatedAt       time.Time           `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt       time.Time           `gorm:"column:updated_at;autoUpdateTime"`
+	Donor           donor.DonorModel    `gorm:"foreignKey:DonorID"`
+	PaymentMethod   *PaymentMethodModel `gorm:"-"`
 }
 
 func (DonationModel) TableName() string {
@@ -27,17 +35,28 @@ func (DonationModel) TableName() string {
 }
 
 func (m DonationModel) ToEntity() Donation {
-	return Donation{
-		ID:            m.ID,
-		CampaignID:    m.CampaignID,
-		Amount:        m.Amount,
-		DonorID:       m.DonorID,
-		Date:          m.Date,
-		Message:       m.Message,
-		IsAnonymous:   m.IsAnonymous,
-		PaymentMethod: m.PaymentMethod,
-		Status:        m.Status,
+	donation := Donation{
+		ID:              m.ID,
+		CampaignID:      m.CampaignID,
+		Amount:          m.Amount,
+		DonorID:         m.DonorID,
+		Date:            m.Date,
+		Message:         m.Message,
+		IsAnonymous:     m.IsAnonymous,
+		PaymentMethodID: m.PaymentMethodID,
+		Status:          m.Status,
 	}
+
+	// Convert payment method info if available
+	if m.PaymentMethod != nil {
+		donation.PaymentMethod = &PaymentMethodInfo{
+			ID:   m.PaymentMethod.ID,
+			Code: m.PaymentMethod.Code,
+			Name: m.PaymentMethod.Name,
+		}
+	}
+
+	return donation
 }
 
 func (m *DonationModel) FromEntity(entity Donation) {
@@ -48,6 +67,6 @@ func (m *DonationModel) FromEntity(entity Donation) {
 	m.Date = entity.Date
 	m.Message = entity.Message
 	m.IsAnonymous = entity.IsAnonymous
-	m.PaymentMethod = entity.PaymentMethod
+	m.PaymentMethodID = entity.PaymentMethodID
 	m.Status = entity.Status
 }

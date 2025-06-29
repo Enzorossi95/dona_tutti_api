@@ -375,6 +375,243 @@ const docTemplate = `{
                 }
             }
         },
+        "/campaigns/{campaign_id}/payment-methods": {
+            "get": {
+                "description": "Get all payment methods configured for a specific campaign",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaigns"
+                ],
+                "summary": "Get campaign payment methods",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "campaign_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/paymentmethod.CampaignPaymentMethod"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add a payment method to a campaign with optional details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaigns"
+                ],
+                "summary": "Create campaign payment method",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "campaign_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campaign Payment Method Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/paymentmethod.CreateCampaignPaymentMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/campaigns/{campaign_id}/payment-methods/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a campaign payment method and its details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaigns"
+                ],
+                "summary": "Update campaign payment method",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "campaign_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Campaign Payment Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campaign Payment Method Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/paymentmethod.CreateCampaignPaymentMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove a payment method from a campaign",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaigns"
+                ],
+                "summary": "Delete campaign payment method",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "campaign_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Campaign Payment Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/campaigns/{id}": {
             "get": {
                 "description": "Get campaign details by ID",
@@ -1107,6 +1344,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/payment-methods": {
+            "get": {
+                "description": "Get a list of all available payment methods",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Get all payment methods",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/paymentmethod.PaymentMethod"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/payment-methods/{id}": {
+            "get": {
+                "description": "Get a specific payment method by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Get payment method by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Payment Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/paymentmethod.PaymentMethod"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/permissions": {
             "get": {
                 "security": [
@@ -1514,6 +1818,12 @@ const docTemplate = `{
                 "organizer": {
                     "type": "string"
                 },
+                "payment_methods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/campaign.CampaignPaymentMethod"
+                    }
+                },
                 "start_date": {
                     "type": "string"
                 },
@@ -1524,6 +1834,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "urgency": {
+                    "type": "integer"
+                }
+            }
+        },
+        "campaign.CampaignPaymentMethod": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "payment_method_id": {
                     "type": "integer"
                 }
             }
@@ -1570,7 +1900,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payment_method": {
-                    "$ref": "#/definitions/donation.PaymentMethod"
+                    "$ref": "#/definitions/donation.PaymentMethodInfo"
+                },
+                "payment_method_id": {
+                    "type": "integer"
                 },
                 "status": {
                     "$ref": "#/definitions/donation.DonationStatus"
@@ -1592,18 +1925,19 @@ const docTemplate = `{
                 "DonationStatusRefunded"
             ]
         },
-        "donation.PaymentMethod": {
-            "type": "string",
-            "enum": [
-                "MercadoPago",
-                "Transferencia",
-                "Efectivo"
-            ],
-            "x-enum-varnames": [
-                "PaymentMethodMercadoPago",
-                "PaymentMethodTransferencia",
-                "PaymentMethodEfectivo"
-            ]
+        "donation.PaymentMethodInfo": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         },
         "donor.Donor": {
             "type": "object",
@@ -1661,6 +1995,207 @@ const docTemplate = `{
                 },
                 "verified": {
                     "type": "boolean"
+                }
+            }
+        },
+        "paymentmethod.CampaignPaymentMethod": {
+            "type": "object",
+            "properties": {
+                "campaign_id": {
+                    "type": "string"
+                },
+                "cash_locations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/paymentmethod.CashLocation"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "payment_method": {
+                    "$ref": "#/definitions/paymentmethod.PaymentMethod"
+                },
+                "payment_method_id": {
+                    "type": "integer"
+                },
+                "transfer_details": {
+                    "$ref": "#/definitions/paymentmethod.TransferDetail"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "paymentmethod.CashLocation": {
+            "type": "object",
+            "properties": {
+                "additional_notes": {
+                    "type": "string"
+                },
+                "address": {
+                    "type": "string"
+                },
+                "available_hours": {
+                    "type": "string"
+                },
+                "campaign_payment_method_id": {
+                    "type": "integer"
+                },
+                "contact_info": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "location_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "paymentmethod.CreateCampaignPaymentMethodRequest": {
+            "type": "object",
+            "required": [
+                "campaign_id",
+                "payment_method_id"
+            ],
+            "properties": {
+                "campaign_id": {
+                    "type": "string"
+                },
+                "cash_locations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/paymentmethod.CreateCashLocation"
+                    }
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "payment_method_id": {
+                    "type": "integer"
+                },
+                "transfer_details": {
+                    "$ref": "#/definitions/paymentmethod.CreateTransferDetail"
+                }
+            }
+        },
+        "paymentmethod.CreateCashLocation": {
+            "type": "object",
+            "required": [
+                "address",
+                "location_name"
+            ],
+            "properties": {
+                "additional_notes": {
+                    "type": "string"
+                },
+                "address": {
+                    "type": "string"
+                },
+                "available_hours": {
+                    "type": "string"
+                },
+                "contact_info": {
+                    "type": "string"
+                },
+                "location_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "paymentmethod.CreateTransferDetail": {
+            "type": "object",
+            "required": [
+                "account_holder",
+                "bank_name",
+                "cbu"
+            ],
+            "properties": {
+                "account_holder": {
+                    "type": "string"
+                },
+                "additional_notes": {
+                    "type": "string"
+                },
+                "alias": {
+                    "type": "string"
+                },
+                "bank_name": {
+                    "type": "string"
+                },
+                "cbu": {
+                    "type": "string"
+                },
+                "swift_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "paymentmethod.PaymentMethod": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "paymentmethod.TransferDetail": {
+            "type": "object",
+            "properties": {
+                "account_holder": {
+                    "type": "string"
+                },
+                "additional_notes": {
+                    "type": "string"
+                },
+                "alias": {
+                    "type": "string"
+                },
+                "bank_name": {
+                    "type": "string"
+                },
+                "campaign_payment_method_id": {
+                    "type": "integer"
+                },
+                "cbu": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "swift_code": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },

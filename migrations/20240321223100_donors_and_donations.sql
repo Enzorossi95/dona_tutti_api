@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS donors (
 CREATE INDEX IF NOT EXISTS idx_donors_email ON donors(email);
 
 -- Create donation types and table
-CREATE TYPE payment_method AS ENUM ('MercadoPago', 'Transferencia', 'Efectivo', 'Tarjeta');
-CREATE TYPE donation_status AS ENUM ('completed', 'pending', 'failed', 'refunded');
+DO $donation_status_type$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'donation_status') THEN CREATE TYPE donation_status AS ENUM ('completed', 'pending', 'failed', 'refunded'); END IF; END $donation_status_type$;
 
 CREATE TABLE IF NOT EXISTS donations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -25,7 +24,7 @@ CREATE TABLE IF NOT EXISTS donations (
     date TIMESTAMP WITH TIME ZONE NOT NULL,
     message TEXT,
     is_anonymous BOOLEAN DEFAULT false,
-    payment_method payment_method NOT NULL,
+    payment_method VARCHAR(255) NOT NULL,
     status donation_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

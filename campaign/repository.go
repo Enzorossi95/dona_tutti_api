@@ -20,7 +20,6 @@ func NewCampaignRepository(db *gorm.DB) *campaignRepository {
 
 func (r *campaignRepository) GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error) {
 	var campaignModel CampaignModel
-	//var categoryName, organizerName string
 
 	// Get the campaign model
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&campaignModel).Error
@@ -31,26 +30,18 @@ func (r *campaignRepository) GetCampaign(ctx context.Context, id uuid.UUID) (Cam
 		return Campaign{}, fmt.Errorf("failed to get campaign: %w", err)
 	}
 
-	// Get category name
-	/*err = r.db.WithContext(ctx).
-		Table("campaign_categories").
-		Select("name").
-		Where("id = ?", campaignModel.CategoryID).
-		Scan(&categoryName).Error
+	var paymentMethods []CampaignPaymentMethodModel
+	err = r.db.WithContext(ctx).
+		Table("campaign_payment_methods cpm").
+		Select("cpm.id, cpm.payment_method_id, pm.code, pm.name, cpm.instructions").
+		Joins("JOIN payment_methods pm ON cpm.payment_method_id = pm.id").
+		Where("cpm.campaign_id = ? AND cpm.is_active = ? AND pm.is_active = ?", id, true, true).
+		Scan(&paymentMethods).Error
 	if err != nil {
-		categoryName = ""
+		fmt.Printf("Warning: failed to get payment methods for campaign %s: %v\n", id.String(), err)
 	}
 
-	// Get organizer name
-	err = r.db.WithContext(ctx).
-		Table("organizers").
-		Select("name").
-		Where("id = ?", campaignModel.OrganizerID).
-		Scan(&organizerName).Error
-	if err != nil {
-		organizerName = ""
-	}*/
-
+	campaignModel.PaymentMethods = paymentMethods
 	return campaignModel.ToEntity(), nil
 }
 

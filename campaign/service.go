@@ -6,6 +6,7 @@ import (
 	"time"
 
 	apierrors "dona_tutti_api/errors"
+	"dona_tutti_api/paymentmethod"
 
 	"github.com/google/uuid"
 )
@@ -24,12 +25,17 @@ type CampaignRepository interface {
 	GetSummary(ctx context.Context) (Summary, error)
 }
 
-type service struct {
-	repo CampaignRepository
+type PaymentMethodService interface {
+	CreateCampaignPaymentMethod(ctx context.Context, req paymentmethod.CreateCampaignPaymentMethodRequest) (int, error)
 }
 
-func NewService(repo CampaignRepository) Service {
-	return &service{repo: repo}
+type service struct {
+	repo             CampaignRepository
+	paymentMethodSvc PaymentMethodService
+}
+
+func NewService(repo CampaignRepository, paymentMethodSvc PaymentMethodService) Service {
+	return &service{repo: repo, paymentMethodSvc: paymentMethodSvc}
 }
 
 func (s *service) GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error) {
@@ -72,6 +78,20 @@ func (s *service) CreateCampaign(ctx context.Context, campaign Campaign) (uuid.U
 
 	if err := s.repo.CreateCampaign(ctx, campaign); err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create campaign: %w", err)
+	}
+
+	if len(campaign.PaymentMethods) > 0 {
+		for _, paymentMethod := range campaign.PaymentMethods {
+			req := paymentmethod.CreateCampaignPaymentMethodRequest{
+				CampaignID:      campaign.ID,
+				PaymentMethodID: paymentMethod.PaymentMethodID,
+				Instructions:    paymentMethod.Instructions,
+			}
+
+			if _, err := s.paymentMethodSvc.CreateCampaignPaymentMethod(ctx, req); err != nil {
+				return uuid.Nil, fmt.Errorf("failed to create campaign payment method: %w", err)
+			}
+		}
 	}
 
 	return campaign.ID, nil

@@ -10,6 +10,7 @@ import (
 	"dona_tutti_api/donor"
 	"dona_tutti_api/migrations"
 	"dona_tutti_api/organizer"
+	"dona_tutti_api/paymentmethod"
 	"dona_tutti_api/rbac"
 	"dona_tutti_api/user"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -37,6 +39,17 @@ import (
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
+
+// CustomValidator struct to implement Echo's Validator interface
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+// Validate implements Echo's Validator interface
+func (cv *CustomValidator) Validate(i interface{}) error {
+	return cv.validator.Struct(i)
+}
+
 func main() {
 	// Initialize Swagger docs
 	docs.SwaggerInfo.Title = "Dona Tutti API"
@@ -67,6 +80,9 @@ func main() {
 	// Initialize Echo
 	e := echo.New()
 
+	// Configure validator
+	e.Validator = &CustomValidator{validator: validator.New()}
+
 	// Middleware
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format:           "[${time_rfc3339}] ${status} ${method} ${uri} - ${latency_human}\n",
@@ -84,9 +100,6 @@ func main() {
 	// Initialize services
 	userRepo := user.NewUserRepository(db)
 
-	campaignRepo := campaign.NewCampaignRepository(db)
-	campaignService := campaign.NewService(campaignRepo)
-
 	categoryRepo := campaigncategory.NewCategoryRepository(db)
 	categoryService := campaigncategory.NewService(categoryRepo)
 
@@ -102,6 +115,12 @@ func main() {
 	donationRepo := donation.NewDonationRepository(db)
 	donationService := donation.NewService(donationRepo)
 
+	paymentMethodRepo := paymentmethod.NewRepository(db)
+	paymentMethodService := paymentmethod.NewService(paymentMethodRepo)
+
+	campaignRepo := campaign.NewCampaignRepository(db)
+	campaignService := campaign.NewService(campaignRepo, paymentMethodService)
+
 	// Initialize RBAC service
 	rbacRepo := rbac.NewRepository(db)
 	rbacService := rbac.NewService(rbacRepo)
@@ -113,6 +132,7 @@ func main() {
 	organizer.RegisterRoutes(api, organizerService)
 	donor.RegisterRoutes(api, donorService)
 	donation.RegisterRoutes(api, donationService)
+	paymentmethod.RegisterRoutes(api, paymentMethodService, rbacService)
 	rbac.RegisterRoutes(api, rbacService)
 
 	// Start server
@@ -121,9 +141,15 @@ func main() {
 		port = "9999"
 	}
 
+	log.Printf("🚀 Starting Dona Tutti API server...")
+	log.Printf("🔗 Database connected successfully")
+	log.Printf("✅ All services initialized")
+
 	fmt.Printf("\n🚀 Server running on port :%s\n", port)
 	fmt.Printf("📚 Swagger documentation available at http://localhost:%s/swagger/index.html\n", port)
 	fmt.Printf("🌐 API Base URL: http://localhost:%s/api\n\n", port)
+
+	log.Printf("🎯 Server listening on port %s", port)
 	log.Fatal(e.Start(":" + port))
 }
 

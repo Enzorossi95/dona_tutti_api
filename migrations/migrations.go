@@ -9,7 +9,7 @@ import (
 )
 
 //go:embed *.sql
-var embedMigrations embed.FS
+var embedMigrations embed.FS // Updated to include payment methods migrations
 
 // Initialize configura el sistema de migraciones
 // Updated to include RBAC migration

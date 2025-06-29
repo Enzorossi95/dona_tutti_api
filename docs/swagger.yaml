@@ -20,6 +20,10 @@ definitions:
         type: string
       organizer:
         type: string
+      payment_methods:
+        items:
+          $ref: '#/definitions/campaign.CampaignPaymentMethod'
+        type: array
       start_date:
         type: string
       status:
@@ -27,6 +31,19 @@ definitions:
       title:
         type: string
       urgency:
+        type: integer
+    type: object
+  campaign.CampaignPaymentMethod:
+    properties:
+      code:
+        type: string
+      id:
+        type: integer
+      instructions:
+        type: string
+      name:
+        type: string
+      payment_method_id:
         type: integer
     type: object
   campaigncategory.CampaignCategory:
@@ -57,7 +74,9 @@ definitions:
       message:
         type: string
       payment_method:
-        $ref: '#/definitions/donation.PaymentMethod'
+        $ref: '#/definitions/donation.PaymentMethodInfo'
+      payment_method_id:
+        type: integer
       status:
         $ref: '#/definitions/donation.DonationStatus'
     type: object
@@ -73,16 +92,15 @@ definitions:
     - DonationStatusPending
     - DonationStatusFailed
     - DonationStatusRefunded
-  donation.PaymentMethod:
-    enum:
-    - MercadoPago
-    - Transferencia
-    - Efectivo
-    type: string
-    x-enum-varnames:
-    - PaymentMethodMercadoPago
-    - PaymentMethodTransferencia
-    - PaymentMethodEfectivo
+  donation.PaymentMethodInfo:
+    properties:
+      code:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   donor.Donor:
     properties:
       email:
@@ -121,6 +139,139 @@ definitions:
         type: string
       verified:
         type: boolean
+    type: object
+  paymentmethod.CampaignPaymentMethod:
+    properties:
+      campaign_id:
+        type: string
+      cash_locations:
+        items:
+          $ref: '#/definitions/paymentmethod.CashLocation'
+        type: array
+      created_at:
+        type: string
+      id:
+        type: integer
+      instructions:
+        type: string
+      is_active:
+        type: boolean
+      payment_method:
+        $ref: '#/definitions/paymentmethod.PaymentMethod'
+      payment_method_id:
+        type: integer
+      transfer_details:
+        $ref: '#/definitions/paymentmethod.TransferDetail'
+      updated_at:
+        type: string
+    type: object
+  paymentmethod.CashLocation:
+    properties:
+      additional_notes:
+        type: string
+      address:
+        type: string
+      available_hours:
+        type: string
+      campaign_payment_method_id:
+        type: integer
+      contact_info:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      location_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  paymentmethod.CreateCampaignPaymentMethodRequest:
+    properties:
+      campaign_id:
+        type: string
+      cash_locations:
+        items:
+          $ref: '#/definitions/paymentmethod.CreateCashLocation'
+        type: array
+      instructions:
+        type: string
+      payment_method_id:
+        type: integer
+      transfer_details:
+        $ref: '#/definitions/paymentmethod.CreateTransferDetail'
+    required:
+    - campaign_id
+    - payment_method_id
+    type: object
+  paymentmethod.CreateCashLocation:
+    properties:
+      additional_notes:
+        type: string
+      address:
+        type: string
+      available_hours:
+        type: string
+      contact_info:
+        type: string
+      location_name:
+        type: string
+    required:
+    - address
+    - location_name
+    type: object
+  paymentmethod.CreateTransferDetail:
+    properties:
+      account_holder:
+        type: string
+      additional_notes:
+        type: string
+      alias:
+        type: string
+      bank_name:
+        type: string
+      cbu:
+        type: string
+      swift_code:
+        type: string
+    required:
+    - account_holder
+    - bank_name
+    - cbu
+    type: object
+  paymentmethod.PaymentMethod:
+    properties:
+      code:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
+  paymentmethod.TransferDetail:
+    properties:
+      account_holder:
+        type: string
+      additional_notes:
+        type: string
+      alias:
+        type: string
+      bank_name:
+        type: string
+      campaign_payment_method_id:
+        type: integer
+      cbu:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      swift_code:
+        type: string
+      updated_at:
+        type: string
     type: object
   rbac.CheckPermissionRequest:
     properties:
@@ -552,6 +703,160 @@ paths:
           schema:
             $ref: '#/definitions/errors.APIError'
       summary: Create a new campaign
+      tags:
+      - campaigns
+  /campaigns/{campaign_id}/payment-methods:
+    get:
+      consumes:
+      - application/json
+      description: Get all payment methods configured for a specific campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaign_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/paymentmethod.CampaignPaymentMethod'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get campaign payment methods
+      tags:
+      - campaigns
+    post:
+      consumes:
+      - application/json
+      description: Add a payment method to a campaign with optional details
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaign_id
+        required: true
+        type: string
+      - description: Campaign Payment Method Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/paymentmethod.CreateCampaignPaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create campaign payment method
+      tags:
+      - campaigns
+  /campaigns/{campaign_id}/payment-methods/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a payment method from a campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaign_id
+        required: true
+        type: string
+      - description: Campaign Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete campaign payment method
+      tags:
+      - campaigns
+    put:
+      consumes:
+      - application/json
+      description: Update a campaign payment method and its details
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaign_id
+        required: true
+        type: string
+      - description: Campaign Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Campaign Payment Method Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/paymentmethod.CreateCampaignPaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update campaign payment method
       tags:
       - campaigns
   /campaigns/{id}:
@@ -1036,6 +1341,50 @@ paths:
       summary: Update organizer details
       tags:
       - organizers
+  /payment-methods:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all available payment methods
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/paymentmethod.PaymentMethod'
+            type: array
+      summary: Get all payment methods
+      tags:
+      - payment-methods
+  /payment-methods/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific payment method by its ID
+      parameters:
+      - description: Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/paymentmethod.PaymentMethod'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get payment method by ID
+      tags:
+      - payment-methods
   /permissions:
     get:
       consumes:
