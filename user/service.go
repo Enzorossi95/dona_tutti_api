@@ -93,8 +93,8 @@ func (s *service) Register(ctx context.Context, email, password, firstName, last
 		Name:     user.FirstName + " " + user.LastName,
 		Avatar:   "",
 		Verified: false,
+		Email:    user.Email,
 	}
-	fmt.Println("organizerEntity", organizerEntity)
 
 	_, err = s.organizerService.CreateOrganizer(ctx, organizerEntity)
 	if err != nil {

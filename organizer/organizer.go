@@ -14,4 +14,8 @@ type Organizer struct {
 	Name      string    `json:"name"`
 	Avatar    string    `json:"avatar"`
 	Verified  bool      `json:"verified"`
+	Email     string    `json:"email"`
+	Phone     string    `json:"phone"`
+	Website   string    `json:"website"`
+	Address   string    `json:"address"`
 }

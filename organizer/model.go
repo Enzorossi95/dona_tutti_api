@@ -14,6 +14,10 @@ type OrganizerModel struct {
 	Name      string    `gorm:"column:name;not null"`
 	Avatar    string    `gorm:"column:avatar"`
 	Verified  bool      `gorm:"column:verified;default:false"`
+	Email     string    `gorm:"column:email;not null"`
+	Phone     string    `gorm:"column:phone;not null"`
+	Website   string    `gorm:"column:website;not null"`
+	Address   string    `gorm:"column:address;not null"`
 }
 
 // TableName specifies the table name for GORM
@@ -30,6 +34,10 @@ func (m OrganizerModel) ToEntity() Organizer {
 		Name:      m.Name,
 		Avatar:    m.Avatar,
 		Verified:  m.Verified,
+		Email:     m.Email,
+		Phone:     m.Phone,
+		Website:   m.Website,
+		Address:   m.Address,
 	}
 }
 
@@ -41,4 +49,8 @@ func (m *OrganizerModel) FromEntity(entity Organizer) {
 	m.Name = entity.Name
 	m.Avatar = entity.Avatar
 	m.Verified = entity.Verified
+	m.Email = entity.Email
+	m.Phone = entity.Phone
+	m.Website = entity.Website
+	m.Address = entity.Address
 }
