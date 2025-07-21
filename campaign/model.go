@@ -57,7 +57,7 @@ func (m CampaignModel) ToEntity() Campaign {
 		Location:    m.Location,
 		CategoryId:  m.CategoryID,
 		Urgency:     m.Urgency,
-		OrganizerId: m.OrganizerID,
+		Organizer:   nil, // Will be populated by repository/service if needed
 		Status:      m.Status,
 	}
 
@@ -106,7 +106,11 @@ func (m *CampaignModel) FromEntity(entity Campaign) {
 	m.Urgency = entity.Urgency
 	m.Status = entity.Status
 	m.CategoryID = entity.CategoryId
-	m.OrganizerID = entity.OrganizerId
+	
+	// Extract organizer ID if organizer is provided
+	if entity.Organizer != nil {
+		m.OrganizerID = entity.Organizer.ID
+	}
 
 	// Map beneficiary fields (handle nil pointers as empty values)
 	if entity.BeneficiaryName != nil {

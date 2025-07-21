@@ -1,10 +1,48 @@
 basePath: /api
 definitions:
+  activity.Activity:
+    properties:
+      author:
+        type: string
+      campaign_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+  activity.ActivityUpdateRequest:
+    properties:
+      author:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+    type: object
   campaign.Campaign:
     properties:
+      beneficiary_age:
+        type: integer
+      beneficiary_name:
+        type: string
       category:
         type: string
       created_at:
+        type: string
+      current_situation:
         type: string
       description:
         type: string
@@ -19,7 +57,7 @@ definitions:
       location:
         type: string
       organizer:
-        type: string
+        $ref: '#/definitions/organizer.Organizer'
       payment_methods:
         items:
           $ref: '#/definitions/campaign.CampaignPaymentMethod'
@@ -32,6 +70,8 @@ definitions:
         type: string
       urgency:
         type: integer
+      urgency_reason:
+        type: string
     type: object
   campaign.CampaignPaymentMethod:
     properties:
@@ -127,18 +167,26 @@ definitions:
     type: object
   organizer.Organizer:
     properties:
+      address:
+        type: string
       avatar:
         type: string
       created_at:
+        type: string
+      email:
         type: string
       id:
         type: string
       name:
         type: string
+      phone:
+        type: string
       user_id:
         type: string
       verified:
         type: boolean
+      website:
+        type: string
     type: object
   paymentmethod.CampaignPaymentMethod:
     properties:
@@ -161,7 +209,9 @@ definitions:
       payment_method_id:
         type: integer
       transfer_details:
-        $ref: '#/definitions/paymentmethod.TransferDetail'
+        items:
+          $ref: '#/definitions/paymentmethod.TransferDetail'
+        type: array
       updated_at:
         type: string
     type: object
@@ -321,6 +371,17 @@ definitions:
       name:
         type: string
       updated_at:
+        type: string
+    type: object
+  s3client.UploadResponse:
+    properties:
+      file_name:
+        type: string
+      key:
+        type: string
+      size:
+        type: integer
+      url:
         type: string
     type: object
   user.AuthToken:
@@ -859,6 +920,155 @@ paths:
       summary: Update campaign payment method
       tags:
       - campaigns
+  /campaigns/{campaignId}/activities:
+    get:
+      consumes:
+      - application/json
+      description: Get all activities for a specific campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/activity.Activity'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      summary: Get activities for a campaign
+      tags:
+      - activities
+    post:
+      consumes:
+      - application/json
+      description: Create a new activity for a campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Activity details
+        in: body
+        name: activity
+        required: true
+        schema:
+          $ref: '#/definitions/activity.Activity'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/activity.Activity'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      summary: Create a new activity
+      tags:
+      - activities
+  /campaigns/{campaignId}/activities/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an activity by ID
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Activity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      summary: Delete an activity
+      tags:
+      - activities
+    get:
+      consumes:
+      - application/json
+      description: Get activity details by ID
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Activity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/activity.Activity'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      summary: Get activity by ID
+      tags:
+      - activities
+    put:
+      consumes:
+      - application/json
+      description: Update activity details by ID. Only provided fields will be updated.
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Activity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Activity update details
+        in: body
+        name: activity
+        required: true
+        schema:
+          $ref: '#/definitions/activity.ActivityUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/activity.Activity'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      summary: Update activity details (partial update)
+      tags:
+      - activities
   /campaigns/{id}:
     delete:
       consumes:
@@ -932,6 +1142,36 @@ paths:
           schema:
             $ref: '#/definitions/errors.APIError'
       summary: Update campaign details
+      tags:
+      - campaigns
+  /campaigns/{id}/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload an image for a campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/s3client.UploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+      summary: Upload campaign image
       tags:
       - campaigns
   /categories:

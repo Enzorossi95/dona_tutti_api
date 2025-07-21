@@ -3,6 +3,8 @@ package campaign
 import (
 	"time"
 
+	"dona_tutti_api/organizer"
+
 	"github.com/google/uuid"
 )
 
@@ -28,7 +30,7 @@ type Campaign struct {
 	Location         string                  `json:"location"`
 	CategoryId       uuid.UUID               `json:"category"`
 	Urgency          int                     `json:"urgency"`
-	OrganizerId      uuid.UUID               `json:"organizer"`
+	Organizer        *organizer.Organizer    `json:"organizer"`
 	Status           string                  `json:"status"`
 	PaymentMethods   []CampaignPaymentMethod `json:"payment_methods,omitempty"`
 	BeneficiaryName  *string                 `json:"beneficiary_name,omitempty"`

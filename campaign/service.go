@@ -6,6 +6,7 @@ import (
 	"time"
 
 	apierrors "dona_tutti_api/errors"
+	"dona_tutti_api/organizer"
 	"dona_tutti_api/paymentmethod"
 
 	"github.com/google/uuid"
@@ -15,6 +16,7 @@ type Service interface {
 	GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error)
 	ListCampaigns(ctx context.Context) ([]Campaign, error)
 	CreateCampaign(ctx context.Context, campaign Campaign) (uuid.UUID, error)
+	UpdateCampaignImage(ctx context.Context, id uuid.UUID, imageURL string) error
 	GetSummary(ctx context.Context) (Summary, error)
 }
 
@@ -22,6 +24,7 @@ type CampaignRepository interface {
 	GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error)
 	ListCampaigns(ctx context.Context) ([]Campaign, error)
 	CreateCampaign(ctx context.Context, campaign Campaign) error
+	UpdateCampaignImage(ctx context.Context, id uuid.UUID, imageURL string) error
 	GetSummary(ctx context.Context) (Summary, error)
 }
 
@@ -29,13 +32,19 @@ type PaymentMethodService interface {
 	CreateCampaignPaymentMethod(ctx context.Context, req paymentmethod.CreateCampaignPaymentMethodRequest) (int, error)
 }
 
+type OrganizerService interface {
+	GetOrganizer(ctx context.Context, id uuid.UUID) (organizer.Organizer, error)
+	UpdateOrganizer(ctx context.Context, organizer organizer.Organizer) error
+}
+
 type service struct {
 	repo             CampaignRepository
 	paymentMethodSvc PaymentMethodService
+	organizerSvc     OrganizerService
 }
 
-func NewService(repo CampaignRepository, paymentMethodSvc PaymentMethodService) Service {
-	return &service{repo: repo, paymentMethodSvc: paymentMethodSvc}
+func NewService(repo CampaignRepository, paymentMethodSvc PaymentMethodService, organizerSvc OrganizerService) Service {
+	return &service{repo: repo, paymentMethodSvc: paymentMethodSvc, organizerSvc: organizerSvc}
 }
 
 func (s *service) GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error) {
@@ -76,6 +85,40 @@ func (s *service) CreateCampaign(ctx context.Context, campaign Campaign) (uuid.U
 		return uuid.Nil, apierrors.NewFieldValidationError("end_date", "campaign end date must be after start date")
 	}
 
+	// Validate and update organizer information
+	if campaign.Organizer == nil {
+		return uuid.Nil, apierrors.NewFieldValidationError("organizer", "organizer information is required")
+	}
+	if campaign.Organizer.ID == uuid.Nil {
+		return uuid.Nil, apierrors.NewFieldValidationError("organizer.id", "organizer ID is required")
+	}
+	if campaign.Organizer.Name == "" {
+		return uuid.Nil, apierrors.NewFieldValidationError("organizer.name", "organizer name is required")
+	}
+	if campaign.Organizer.Email == "" {
+		return uuid.Nil, apierrors.NewFieldValidationError("organizer.email", "organizer email is required")
+	}
+	if campaign.Organizer.Phone == "" {
+		return uuid.Nil, apierrors.NewFieldValidationError("organizer.phone", "organizer phone is required")
+	}
+
+	// Get existing organizer to preserve UserID and other fields
+	existingOrganizer, err := s.organizerSvc.GetOrganizer(ctx, campaign.Organizer.ID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to get existing organizer: %w", err)
+	}
+
+	// Update only the provided fields, preserving existing data
+	updatedOrganizer := existingOrganizer
+	updatedOrganizer.Name = campaign.Organizer.Name
+	updatedOrganizer.Email = campaign.Organizer.Email
+	updatedOrganizer.Phone = campaign.Organizer.Phone
+
+	// Update organizer information
+	if err := s.organizerSvc.UpdateOrganizer(ctx, updatedOrganizer); err != nil {
+		return uuid.Nil, fmt.Errorf("failed to update organizer: %w", err)
+	}
+
 	if err := s.repo.CreateCampaign(ctx, campaign); err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create campaign: %w", err)
 	}
@@ -95,6 +138,21 @@ func (s *service) CreateCampaign(ctx context.Context, campaign Campaign) (uuid.U
 	}
 
 	return campaign.ID, nil
+}
+
+func (s *service) UpdateCampaignImage(ctx context.Context, id uuid.UUID, imageURL string) error {
+	// Check if campaign exists
+	_, err := s.repo.GetCampaign(ctx, id)
+	if err != nil {
+		return fmt.Errorf("campaign not found: %w", err)
+	}
+
+	// Update campaign image
+	if err := s.repo.UpdateCampaignImage(ctx, id, imageURL); err != nil {
+		return fmt.Errorf("failed to update campaign image: %w", err)
+	}
+
+	return nil
 }
 
 func (s *service) GetSummary(ctx context.Context) (Summary, error) {

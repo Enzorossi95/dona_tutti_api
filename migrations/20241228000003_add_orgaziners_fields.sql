@@ -9,7 +9,7 @@ ADD COLUMN address VARCHAR(500) NULL;
 -- +goose Down
 
 -- Remove the added columns
-ALTER TABLE campaigns 
+ALTER TABLE organizers 
 DROP COLUMN IF EXISTS email,
 DROP COLUMN IF EXISTS phone,
 DROP COLUMN IF EXISTS website,

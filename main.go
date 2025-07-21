@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"dona_tutti_api/campaign"
+	"dona_tutti_api/campaign/activity"
 	"dona_tutti_api/campaigncategory"
 	"dona_tutti_api/database"
 	"dona_tutti_api/docs"
@@ -12,6 +13,7 @@ import (
 	"dona_tutti_api/organizer"
 	"dona_tutti_api/paymentmethod"
 	"dona_tutti_api/rbac"
+	"dona_tutti_api/s3client"
 	"dona_tutti_api/user"
 	"fmt"
 	"log"
@@ -19,6 +21,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -51,6 +54,14 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env file not found or could not be loaded: %v", err)
+		log.Printf("Using system environment variables instead")
+	} else {
+		log.Printf("✅ Environment variables loaded from .env file")
+	}
+
 	// Initialize Swagger docs
 	docs.SwaggerInfo.Title = "Dona Tutti API"
 	docs.SwaggerInfo.Description = "API for managing donations and campaigns in the Dona Tutti platform"
@@ -119,7 +130,26 @@ func main() {
 	paymentMethodService := paymentmethod.NewService(paymentMethodRepo)
 
 	campaignRepo := campaign.NewCampaignRepository(db)
-	campaignService := campaign.NewService(campaignRepo, paymentMethodService)
+	campaignService := campaign.NewService(campaignRepo, paymentMethodService, organizerService)
+
+	// Initialize Activity service
+	activityRepo := activity.NewRepository(db)
+	activityService := activity.NewService(activityRepo)
+
+	// Initialize S3 client
+	s3Client, err := s3client.NewClient()
+	if err != nil {
+		log.Printf("⚠️  S3 Upload Service Disabled: %v", err)
+		log.Printf("💡 To enable file uploads, configure these environment variables:")
+		log.Printf("   AWS_REGION (default: us-east-1)")
+		log.Printf("   AWS_S3_BUCKET (required)")
+		log.Printf("   AWS_ACCESS_KEY_ID (required)")
+		log.Printf("   AWS_SECRET_ACCESS_KEY (required)")
+		s3Client = nil
+	} else {
+		log.Printf("✅ S3 Upload Service initialized successfully")
+		log.Printf("📦 Using bucket: %s", s3Client.GetBucketName())
+	}
 
 	// Initialize RBAC service
 	rbacRepo := rbac.NewRepository(db)
@@ -127,7 +157,7 @@ func main() {
 
 	// Register routes
 	user.RegisterRoutes(api, userService)
-	campaign.RegisterRoutes(api, campaignService, rbacService)
+	campaign.RegisterRoutes(api, campaignService, activityService, s3Client, rbacService)
 	campaigncategory.RegisterRoutes(api, categoryService)
 	organizer.RegisterRoutes(api, organizerService)
 	donor.RegisterRoutes(api, donorService)

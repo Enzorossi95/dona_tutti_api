@@ -86,6 +86,12 @@ func (r *campaignRepository) CreateCampaign(ctx context.Context, campaign Campai
 	return nil
 }
 
+func (r *campaignRepository) UpdateCampaignImage(ctx context.Context, id uuid.UUID, imageURL string) error {
+	return r.db.WithContext(ctx).Model(&CampaignModel{}).
+		Where("id = ?", id).
+		Update("image", imageURL).Error
+}
+
 func (r *campaignRepository) GetSummary(ctx context.Context) (Summary, error) {
 	var summary Summary
 
