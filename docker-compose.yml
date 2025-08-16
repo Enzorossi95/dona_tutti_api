@@ -4,7 +4,7 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: dona_tutti_postgres
+    container_name: dona_tutti_postgres_${COMPOSE_PROFILES:-prod}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT_EXTERNAL:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d/
@@ -24,13 +24,14 @@ services:
       timeout: 5s
       retries: 5
 
-  # Go API Service
+  # Go API Service - Production
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: dona_tutti_api
+    container_name: dona_tutti_api_${COMPOSE_PROFILES:-prod}
     restart: unless-stopped
+    profiles: ["prod"]
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -40,13 +41,42 @@ services:
       DB_SSLMODE: ${DB_SSLMODE}
       API_PORT: ${API_PORT}
     ports:
-      - "${API_PORT}:9999"
+      - "${API_PORT:-9999}:9999"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - dona_tutti_network
     volumes:
+      - ./logs:/app/logs
+
+  # Go API Service - Development with hot reload
+  api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dona_tutti_api_dev
+    restart: unless-stopped
+    profiles: ["dev"]
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SSLMODE: ${DB_SSLMODE}
+      API_PORT: ${API_PORT}
+      CGO_ENABLED: 0
+      DB_PORT_EXTERNAL: 5440  # Para indicar el puerto externo en desarrollo
+    ports:
+      - "${API_PORT:-9999}:9999"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dona_tutti_network
+    volumes:
+      - .:/app
       - ./logs:/app/logs
 
 # Networks

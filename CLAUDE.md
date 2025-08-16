@@ -6,10 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Running the Application
 ```bash
-# Development with Docker (recommended)
-docker-compose up --build
+# Development with Docker (with hot reload, DB on port 5440)
+DB_PORT_EXTERNAL=5440 docker-compose --profile dev up --build
 
-# Local development
+# Production with Docker (standard port 5432 for DB)
+docker-compose --profile prod up --build
+
+# Run only PostgreSQL service
+docker-compose up postgres
+
+# Local development (without Docker)
 go run main.go
 
 # Environment setup for local development
@@ -42,18 +48,26 @@ docker-compose exec postgres psql -U microservice_user -d microservice_db
 
 ### Docker Operations
 ```bash
-# Build and start services
-docker-compose up --build
+# Build and start services (Development)
+DB_PORT_EXTERNAL=5440 docker-compose --profile dev up --build
 
-# Stop services
-docker-compose down
+# Build and start services (Production)
+docker-compose --profile prod up --build
+
+# Stop all services
+docker-compose --profile dev down
+docker-compose --profile prod down
 
 # View logs
-docker-compose logs -f api
-docker-compose logs -f postgres
+docker-compose logs -f api       # Production API
+docker-compose logs -f api-dev   # Development API
+docker-compose logs -f postgres  # PostgreSQL DB
 
-# Restart API only
-docker-compose restart api
+# Restart specific services
+docker-compose --profile dev restart api-dev
+docker-compose --profile prod restart api
+
+# Note: Dev uses port 5440 for PostgreSQL external access, Prod uses port 5432
 ```
 
 ## Architecture Overview
