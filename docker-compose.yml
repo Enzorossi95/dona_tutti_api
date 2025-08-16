@@ -68,6 +68,12 @@ services:
       API_PORT: ${API_PORT}
       CGO_ENABLED: 0
       DB_PORT_EXTERNAL: 5440  # Para indicar el puerto externo en desarrollo
+      # LocalStack S3 configuration for development
+      LOCALSTACK_ENDPOINT: ${LOCALSTACK_ENDPOINT:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-donatutti}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
     ports:
       - "${API_PORT:-9999}:9999"
     depends_on:
@@ -79,6 +85,29 @@ services:
       - .:/app
       - ./logs:/app/logs
 
+  # LocalStack for AWS S3 simulation
+  localstack:
+    image: localstack/localstack:latest
+    container_name: dona_tutti_localstack
+    profiles: ["localstack", "dev-local"]
+    ports:
+      - "4566:4566"  # LocalStack gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=s3
+      - DEBUG=0
+      - DATA_DIR=/var/lib/localstack
+      - PERSISTENCE=1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - dona_tutti_network
+
 # Networks
 networks:
   dona_tutti_network:
@@ -87,4 +116,6 @@ networks:
 # Volumes
 volumes:
   postgres_data:
+    driver: local
+  localstack_data:
     driver: local

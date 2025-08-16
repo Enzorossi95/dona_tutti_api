@@ -45,8 +45,17 @@ func NewClient() (*Client, error) {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
+	// Create S3 client with optional LocalStack endpoint
+	s3Options := func(o *s3.Options) {
+		// Check for LocalStack endpoint
+		if endpoint := os.Getenv("LOCALSTACK_ENDPOINT"); endpoint != "" {
+			o.BaseEndpoint = &endpoint
+			o.UsePathStyle = true // LocalStack requires path-style URLs
+		}
+	}
+
 	// Create S3 client
-	s3Client := s3.NewFromConfig(awsConfig)
+	s3Client := s3.NewFromConfig(awsConfig, s3Options)
 
 	return &Client{
 		s3Client:   s3Client,
