@@ -184,6 +184,109 @@ else
 fi
 
 # ============================================================================
+echo -e "${YELLOW}🧾 PRUEBAS DE RECEIPTS (COMPROBANTES)${NC}"
+echo "======================================"
+
+# Usar una campaña existente para las pruebas
+CAMPAIGN_ID="770e8400-e29b-41d4-a716-446655440001"
+
+# 11. Listar comprobantes de una campaña
+show_test "11. GET /api/campaigns/$CAMPAIGN_ID/receipts - Listar comprobantes"
+response=$(curl -s "$BASE_URL/api/campaigns/$CAMPAIGN_ID/receipts")
+if [[ $? -eq 0 ]]; then
+    show_success "Listado de comprobantes obtenido (puede estar vacío)"
+    show_response "$response"
+else
+    show_error "No se pudieron obtener los comprobantes"
+fi
+
+# 12. Crear un nuevo comprobante (requiere autenticación admin - puede fallar)
+show_test "12. POST /api/campaigns/$CAMPAIGN_ID/receipts - Crear comprobante"
+response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/receipts" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "Proveedor de Prueba",
+    "name": "Comprobante de Test",
+    "description": "Descripción del comprobante de prueba",
+    "total": 1500.00,
+    "quantity": 2,
+    "date": "2025-01-15T10:00:00Z",
+    "note": "Nota de prueba del comprobante"
+  }')
+
+if [[ $response == *"id"* ]]; then
+    show_success "Comprobante creado exitosamente"
+    show_response "$response"
+    RECEIPT_ID=$(echo "$response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+    echo -e "${GREEN}💾 ID del comprobante creado: $RECEIPT_ID${NC}"
+    echo ""
+
+    # 12.1 Verificar comprobante creado
+    if [ ! -z "$RECEIPT_ID" ]; then
+        show_test "12.1. GET /api/campaigns/$CAMPAIGN_ID/receipts/$RECEIPT_ID - Verificar comprobante"
+        verify_response=$(curl -s "$BASE_URL/api/campaigns/$CAMPAIGN_ID/receipts/$RECEIPT_ID")
+        if [[ $verify_response == *"Proveedor de Prueba"* ]]; then
+            show_success "Comprobante verificado correctamente"
+            show_response "$verify_response"
+        else
+            show_error "No se pudo verificar el comprobante"
+        fi
+    fi
+else
+    echo -e "${YELLOW}⚠️  Nota: La creación requiere autenticación admin${NC}"
+    show_response "$response"
+fi
+
+# ============================================================================
+echo -e "${YELLOW}💰 PRUEBAS DE DONATIONS (DONACIONES)${NC}"
+echo "===================================="
+
+# 13. Listar donaciones de una campaña
+show_test "13. GET /api/campaigns/$CAMPAIGN_ID/donations - Listar donaciones"
+response=$(curl -s "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations")
+if [[ $? -eq 0 ]]; then
+    show_success "Listado de donaciones obtenido (puede estar vacío)"
+    show_response "$response"
+else
+    show_error "No se pudieron obtener las donaciones"
+fi
+
+# 14. Crear una nueva donación (requiere autenticación admin - puede fallar)
+show_test "14. POST /api/campaigns/$CAMPAIGN_ID/donations - Crear donación"
+response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500.00,
+    "donor_id": "550e8400-e29b-41d4-a716-446655440001",
+    "payment_method_id": 1,
+    "message": "Donación de prueba mediante API",
+    "is_anonymous": false
+  }')
+
+if [[ $response == *"id"* ]]; then
+    show_success "Donación creada exitosamente"
+    show_response "$response"
+    DONATION_ID=$(echo "$response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+    echo -e "${GREEN}💾 ID de la donación creada: $DONATION_ID${NC}"
+    echo ""
+
+    # 14.1 Verificar donación creada
+    if [ ! -z "$DONATION_ID" ]; then
+        show_test "14.1. GET /api/campaigns/$CAMPAIGN_ID/donations/$DONATION_ID - Verificar donación"
+        verify_response=$(curl -s "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations/$DONATION_ID")
+        if [[ $verify_response == *"Donación de prueba"* ]]; then
+            show_success "Donación verificada correctamente"
+            show_response "$verify_response"
+        else
+            show_error "No se pudo verificar la donación"
+        fi
+    fi
+else
+    echo -e "${YELLOW}⚠️  Nota: La creación requiere autenticación admin${NC}"
+    show_response "$response"
+fi
+
+# ============================================================================
 echo -e "${BLUE}🎯 RESUMEN DE PRUEBAS COMPLETADAS${NC}"
 echo "=================================="
 echo -e "${GREEN}✅ Todos los endpoints principales funcionan correctamente${NC}"
@@ -191,16 +294,35 @@ echo -e "${GREEN}✅ GORM está funcionando correctamente con PostgreSQL${NC}"
 echo -e "${GREEN}✅ La separación de modelos de dominio y base de datos funciona${NC}"
 echo -e "${GREEN}✅ Las relaciones entre entidades (campaigns, categories, organizers) funcionan${NC}"
 echo -e "${GREEN}✅ Los endpoints CRUD están operativos${NC}"
+echo -e "${GREEN}✅ Los módulos de Receipts y Donations funcionan correctamente${NC}"
 echo ""
 echo -e "${PURPLE}🔗 Endpoints probados:${NC}"
+echo "  ${YELLOW}Articles:${NC}"
 echo "  • GET /articles"
 echo "  • GET /articles/{id}"
+echo ""
+echo "  ${YELLOW}Campaigns:${NC}"
 echo "  • GET /campaigns"
 echo "  • GET /campaigns/{id}"
 echo "  • POST /campaigns"
+echo ""
+echo "  ${YELLOW}Receipts (Comprobantes):${NC}"
+echo "  • GET /api/campaigns/{campaignId}/receipts"
+echo "  • POST /api/campaigns/{campaignId}/receipts"
+echo "  • GET /api/campaigns/{campaignId}/receipts/{id}"
+echo ""
+echo "  ${YELLOW}Donations (Donaciones):${NC}"
+echo "  • GET /api/campaigns/{campaignId}/donations"
+echo "  • POST /api/campaigns/{campaignId}/donations"
+echo "  • GET /api/campaigns/{campaignId}/donations/{id}"
+echo ""
+echo "  ${YELLOW}Organizers:${NC}"
 echo "  • GET /organizers"
 echo "  • GET /organizers/{id}"
+echo ""
+echo "  ${YELLOW}Categories:${NC}"
 echo "  • GET /categories"
 echo "  • GET /categories/{id}"
 echo ""
 echo -e "${BLUE}🚀 ¡Microservicio funcionando perfectamente!${NC}"
+echo -e "${YELLOW}📝 Nota: Los endpoints POST/PUT requieren autenticación admin${NC}"

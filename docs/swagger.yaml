@@ -373,6 +373,74 @@ definitions:
       updated_at:
         type: string
     type: object
+  receipts.Receipt:
+    properties:
+      campaign_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      document_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      provider:
+        type: string
+      quantity:
+        type: integer
+      total:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  receipts.ReceiptCreateRequest:
+    properties:
+      date:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      provider:
+        type: string
+      quantity:
+        minimum: 1
+        type: integer
+      total:
+        type: number
+    required:
+    - date
+    - name
+    - provider
+    - total
+    type: object
+  receipts.ReceiptUpdateRequest:
+    properties:
+      date:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      provider:
+        type: string
+      quantity:
+        minimum: 1
+        type: integer
+      total:
+        type: number
+    type: object
   s3client.UploadResponse:
     properties:
       file_name:
@@ -537,33 +605,6 @@ info:
   title: Dona Tutti API
   version: "1.0"
 paths:
-  /api/donations/campaign/{id}:
-    get:
-      consumes:
-      - application/json
-      description: Get a list of donations for a specific campaign
-      parameters:
-      - description: Campaign ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/donation.Donation'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.APIError'
-      summary: List donations by campaign
-      tags:
-      - donations
   /auth/check-permission:
     get:
       consumes:
@@ -1069,6 +1110,376 @@ paths:
       summary: Update activity details (partial update)
       tags:
       - activities
+  /campaigns/{campaignId}/donations:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all donations for a specific campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/donation.Donation'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all donations for a campaign
+      tags:
+      - donations
+    post:
+      consumes:
+      - application/json
+      description: Create a new donation for a campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Donation data
+        in: body
+        name: donation
+        required: true
+        schema:
+          $ref: '#/definitions/donation.Donation'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/donation.Donation'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new donation
+      tags:
+      - donations
+  /campaigns/{campaignId}/donations/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get donation details by ID
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/donation.Donation'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a donation by ID
+      tags:
+      - donations
+    put:
+      consumes:
+      - application/json
+      description: Update an existing donation
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Donation update data
+        in: body
+        name: donation
+        required: true
+        schema:
+          $ref: '#/definitions/donation.Donation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/donation.Donation'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a donation
+      tags:
+      - donations
+  /campaigns/{campaignId}/receipts:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all receipts for a specific campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/receipts.Receipt'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all receipts for a campaign
+      tags:
+      - receipts
+    post:
+      consumes:
+      - application/json
+      description: Create a new receipt for a campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Receipt data
+        in: body
+        name: receipt
+        required: true
+        schema:
+          $ref: '#/definitions/receipts.ReceiptCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/receipts.Receipt'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new receipt
+      tags:
+      - receipts
+  /campaigns/{campaignId}/receipts/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a receipt by ID
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Receipt ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a receipt
+      tags:
+      - receipts
+    get:
+      consumes:
+      - application/json
+      description: Get receipt details by ID
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Receipt ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/receipts.Receipt'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a receipt by ID
+      tags:
+      - receipts
+    put:
+      consumes:
+      - application/json
+      description: Update an existing receipt
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Receipt ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Receipt update data
+        in: body
+        name: receipt
+        required: true
+        schema:
+          $ref: '#/definitions/receipts.ReceiptUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/receipts.Receipt'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a receipt
+      tags:
+      - receipts
+  /campaigns/{campaignId}/receipts/{id}/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a PDF document for a receipt
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Receipt ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: PDF file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upload receipt document
+      tags:
+      - receipts
   /campaigns/{id}:
     delete:
       consumes:
@@ -1169,6 +1580,10 @@ paths:
             $ref: '#/definitions/s3client.UploadResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.APIError'
+        "503":
+          description: Service Unavailable
           schema:
             $ref: '#/definitions/errors.APIError'
       summary: Upload campaign image
@@ -1273,105 +1688,6 @@ paths:
       summary: Update category details
       tags:
       - categories
-  /donations:
-    get:
-      consumes:
-      - application/json
-      description: Get a list of all donations
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/donation.Donation'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.APIError'
-      summary: List all donations
-      tags:
-      - donations
-    post:
-      consumes:
-      - application/json
-      description: Create a new donation with the provided details
-      parameters:
-      - description: Donation details
-        in: body
-        name: donation
-        required: true
-        schema:
-          $ref: '#/definitions/donation.Donation'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/donation.Donation'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.APIError'
-      summary: Create a new donation
-      tags:
-      - donations
-  /donations/{id}:
-    get:
-      consumes:
-      - application/json
-      description: Get donation details by ID
-      parameters:
-      - description: Donation ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/donation.Donation'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.APIError'
-      summary: Get donation by ID
-      tags:
-      - donations
-    put:
-      consumes:
-      - application/json
-      description: Update donation details by ID
-      parameters:
-      - description: Donation ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Donation details
-        in: body
-        name: donation
-        required: true
-        schema:
-          $ref: '#/definitions/donation.Donation'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.APIError'
-      summary: Update donation details
-      tags:
-      - donations
   /donors:
     get:
       consumes:

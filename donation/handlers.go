@@ -15,44 +15,42 @@ func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
-// RegisterRoutes registers all donation routes
-func RegisterRoutes(g *echo.Group, service Service) {
-	handler := NewHandler(service)
-
-	// Donation routes
-	donationGroup := g.Group("/donations")
-	donationGroup.GET("", handler.ListDonations)
-	donationGroup.GET("/:id", handler.GetDonation)
-	donationGroup.POST("", handler.CreateDonation)
-	donationGroup.PUT("/:id", handler.UpdateDonation)
-}
-
-// @Summary List all donations
-// @Description Get a list of all donations
+// GetDonationsByCampaign returns all donations for a campaign
+// @Summary Get all donations for a campaign
+// @Description Get a list of all donations for a specific campaign
 // @Tags donations
 // @Accept json
 // @Produce json
+// @Param campaignId path string true "Campaign ID"
 // @Success 200 {array} Donation
-// @Failure 400 {object} errors.APIError
-// @Router /donations [get]
-func (h *Handler) ListDonations(c echo.Context) error {
-	donations, err := h.service.ListDonations(c.Request().Context())
+// @Failure 400 {object} map[string]string
+// @Router /campaigns/{campaignId}/donations [get]
+func (h *Handler) GetDonationsByCampaign(c echo.Context) error {
+	campaignID, err := uuid.Parse(c.Param("campaignId"))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid campaign ID")
+	}
+
+	donations, err := h.service.ListDonationsByCampaign(c.Request().Context(), campaignID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, donations)
 }
 
-// @Summary Get donation by ID
+// GetDonation returns a specific donation
+// @Summary Get a donation by ID
 // @Description Get donation details by ID
 // @Tags donations
 // @Accept json
 // @Produce json
+// @Param campaignId path string true "Campaign ID"
 // @Param id path string true "Donation ID"
 // @Success 200 {object} Donation
-// @Failure 400 {object} errors.APIError
-// @Router /donations/{id} [get]
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /campaigns/{campaignId}/donations/{id} [get]
 func (h *Handler) GetDonation(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -61,85 +59,82 @@ func (h *Handler) GetDonation(c echo.Context) error {
 
 	donation, err := h.service.GetDonation(c.Request().Context(), id)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, donation)
 }
 
+// CreateDonation creates a new donation
 // @Summary Create a new donation
-// @Description Create a new donation with the provided details
+// @Description Create a new donation for a campaign
 // @Tags donations
 // @Accept json
 // @Produce json
-// @Param donation body Donation true "Donation details"
+// @Param campaignId path string true "Campaign ID"
+// @Param donation body Donation true "Donation data"
 // @Success 201 {object} Donation
-// @Failure 400 {object} errors.APIError
-// @Router /donations [post]
+// @Failure 400 {object} map[string]string
+// @Router /campaigns/{campaignId}/donations [post]
 func (h *Handler) CreateDonation(c echo.Context) error {
+	campaignID, err := uuid.Parse(c.Param("campaignId"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid campaign ID")
+	}
+
 	var donation Donation
 	if err := c.Bind(&donation); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request format")
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
+
+	// Ensure the donation is for the correct campaign
+	donation.CampaignID = campaignID
 
 	id, err := h.service.CreateDonation(c.Request().Context(), donation)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	donation.ID = id
 	return c.JSON(http.StatusCreated, donation)
 }
 
-// @Summary Update donation details
-// @Description Update donation details by ID
+// UpdateDonation updates an existing donation
+// @Summary Update a donation
+// @Description Update an existing donation
 // @Tags donations
 // @Accept json
 // @Produce json
+// @Param campaignId path string true "Campaign ID"
 // @Param id path string true "Donation ID"
-// @Param donation body Donation true "Donation details"
-// @Success 200
-// @Failure 400 {object} errors.APIError
-// @Router /donations/{id} [put]
+// @Param donation body Donation true "Donation update data"
+// @Success 200 {object} Donation
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /campaigns/{campaignId}/donations/{id} [put]
 func (h *Handler) UpdateDonation(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid donation ID")
 	}
 
-	var donation Donation
-	if err := c.Bind(&donation); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request format")
-	}
-
-	donation.ID = id
-	err = h.service.UpdateDonation(c.Request().Context(), donation)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	return c.NoContent(http.StatusOK)
-}
-
-// @Summary List donations by campaign
-// @Description Get a list of donations for a specific campaign
-// @Tags donations
-// @Accept json
-// @Produce json
-// @Param id path string true "Campaign ID"
-// @Success 200 {array} Donation
-// @Failure 400 {object} errors.APIError
-// @Router /api/donations/campaign/{id} [get]
-func (h *Handler) ListDonationsByCampaign(c echo.Context) error {
-	campaignID, err := uuid.Parse(c.Param("id"))
+	campaignID, err := uuid.Parse(c.Param("campaignId"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid campaign ID")
 	}
 
-	donations, err := h.service.ListDonationsByCampaign(c.Request().Context(), campaignID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	var donation Donation
+	if err := c.Bind(&donation); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	return c.JSON(http.StatusOK, donations)
+	// Ensure the donation IDs are correct
+	donation.ID = id
+	donation.CampaignID = campaignID
+
+	if err := h.service.UpdateDonation(c.Request().Context(), donation); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, donation)
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"dona_tutti_api/campaign"
 	"dona_tutti_api/campaign/activity"
+	"dona_tutti_api/campaign/receipts"
 	"dona_tutti_api/campaigncategory"
 	"dona_tutti_api/database"
 	"dona_tutti_api/docs"
@@ -136,6 +137,10 @@ func main() {
 	activityRepo := activity.NewRepository(db)
 	activityService := activity.NewService(activityRepo)
 
+	// Initialize Receipts service
+	receiptsRepo := receipts.NewRepository(db)
+	receiptsService := receipts.NewService(receiptsRepo)
+
 	// Initialize S3 client
 	s3Client, err := s3client.NewClient()
 	if err != nil {
@@ -157,11 +162,10 @@ func main() {
 
 	// Register routes
 	user.RegisterRoutes(api, userService)
-	campaign.RegisterRoutes(api, campaignService, activityService, s3Client, rbacService)
+	campaign.RegisterRoutes(api, campaignService, activityService, receiptsService, donationService, s3Client, rbacService)
 	campaigncategory.RegisterRoutes(api, categoryService)
 	organizer.RegisterRoutes(api, organizerService)
 	donor.RegisterRoutes(api, donorService)
-	donation.RegisterRoutes(api, donationService)
 	paymentmethod.RegisterRoutes(api, paymentMethodService, rbacService)
 	rbac.RegisterRoutes(api, rbacService)
 

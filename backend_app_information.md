@@ -339,6 +339,116 @@ Response: 200 OK
 }
 ```
 
+### Campaign Receipts Endpoints
+
+#### Get Campaign Receipts (Public)
+```http
+GET /api/campaigns/{campaignId}/receipts
+
+Response: 200 OK
+[
+  {
+    "id": "receipt-uuid",
+    "campaign_id": "campaign-uuid",
+    "provider": "Office Supply Store",
+    "name": "School Supplies Purchase",
+    "description": "Notebooks, pencils, and other supplies for students",
+    "total": 1500.00,
+    "quantity": 50,
+    "date": "2024-06-15T10:00:00Z",
+    "document_url": "https://s3.amazonaws.com/bucket/receipts/uuid/document.pdf",
+    "note": "Purchased for initial distribution"
+  }
+]
+```
+
+#### Get Receipt by ID (Public)
+```http
+GET /api/campaigns/{campaignId}/receipts/{id}
+
+Response: 200 OK
+{
+  "id": "receipt-uuid",
+  "campaign_id": "campaign-uuid",
+  "provider": "Office Supply Store",
+  "name": "School Supplies Purchase",
+  "description": "Notebooks, pencils, and other supplies for students",
+  "total": 1500.00,
+  "quantity": 50,
+  "date": "2024-06-15T10:00:00Z",
+  "document_url": "https://s3.amazonaws.com/bucket/receipts/uuid/document.pdf",
+  "note": "Purchased for initial distribution"
+}
+```
+
+#### Create Receipt (Admin Only)
+```http
+POST /api/campaigns/{campaignId}/receipts
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "provider": "Medical Supply Company",
+  "name": "Medical Equipment Purchase",
+  "description": "Essential medical supplies for clinic",
+  "total": 5000.00,
+  "quantity": 10,
+  "date": "2024-06-20T15:00:00Z",
+  "note": "Emergency supplies for new clinic"
+}
+
+Response: 201 Created
+{
+  "id": "new-receipt-uuid",
+  "campaign_id": "campaign-uuid",
+  ...
+}
+```
+
+#### Update Receipt (Admin Only)
+```http
+PUT /api/campaigns/{campaignId}/receipts/{id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "total": 5500.00,
+  "note": "Updated amount after additional items"
+}
+
+Response: 200 OK
+{
+  "id": "receipt-uuid",
+  "total": 5500.00,
+  ...
+}
+```
+
+#### Delete Receipt (Admin Only)
+```http
+DELETE /api/campaigns/{campaignId}/receipts/{id}
+Authorization: Bearer {token}
+
+Response: 204 No Content
+```
+
+#### Upload Receipt Document (Admin Only)
+```http
+POST /api/campaigns/{campaignId}/receipts/{id}/upload
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+file: [binary PDF data]
+
+Response: 200 OK
+{
+  "url": "https://s3.amazonaws.com/bucket/receipts/uuid/document.pdf",
+  "key": "receipts/uuid/document.pdf",
+  "file_name": "receipt.pdf",
+  "size": 204800
+}
+```
+
 ### Campaign Activity Endpoints
 
 #### Get Campaign Activities
@@ -410,10 +520,9 @@ Response: 204 No Content
 
 ### Donation Endpoints
 
-#### List Donations
+#### Get Campaign Donations (Public)
 ```http
-GET /api/donations
-Authorization: Bearer {token}
+GET /api/campaigns/{campaignId}/donations
 
 Response: 200 OK
 [
@@ -435,28 +544,35 @@ Response: 200 OK
 ]
 ```
 
-#### Get Donation by ID
+#### Get Donation by ID (Public)
 ```http
-GET /api/donations/{id}
-Authorization: Bearer {token}
+GET /api/campaigns/{campaignId}/donations/{id}
 
 Response: 200 OK
 {
   "id": "donation-uuid",
   "campaign_id": "campaign-uuid",
   "amount": 100.00,
-  ...
+  "donor_id": "donor-uuid",
+  "date": "2024-06-01T12:00:00Z",
+  "message": "Happy to help!",
+  "is_anonymous": false,
+  "payment_method": {
+    "id": 1,
+    "code": "transfer",
+    "name": "Bank Transfer"
+  },
+  "status": "completed"
 }
 ```
 
-#### Create Donation
+#### Create Donation (Admin Only)
 ```http
-POST /api/donations
+POST /api/campaigns/{campaignId}/donations
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "campaign_id": "campaign-uuid",
   "amount": 250.00,
   "donor_id": "donor-uuid",
   "message": "Keep up the good work!",
@@ -469,13 +585,18 @@ Response: 201 Created
   "id": "new-donation-uuid",
   "campaign_id": "campaign-uuid",
   "amount": 250.00,
-  ...
+  "date": "2024-06-01T12:00:00Z",
+  "donor_id": "donor-uuid",
+  "message": "Keep up the good work!",
+  "is_anonymous": false,
+  "payment_method_id": 1,
+  "status": "pending"
 }
 ```
 
-#### Update Donation
+#### Update Donation (Admin Only)
 ```http
-PUT /api/donations/{id}
+PUT /api/campaigns/{campaignId}/donations/{id}
 Authorization: Bearer {token}
 Content-Type: application/json
 
@@ -488,6 +609,7 @@ Response: 200 OK
 {
   "id": "donation-uuid",
   "status": "completed",
+  "message": "Updated message",
   ...
 }
 ```
@@ -954,6 +1076,24 @@ CREATE TABLE activities (
 );
 ```
 
+#### receipts
+```sql
+CREATE TABLE receipts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    campaign_id UUID NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    provider VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    total DECIMAL(10,2) NOT NULL CHECK (total > 0),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    date TIMESTAMP WITH TIME ZONE NOT NULL,
+    document_url VARCHAR(500),
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### RBAC Tables
 
 #### roles
@@ -1076,6 +1216,7 @@ erDiagram
     campaign_categories ||--o{ campaigns : "categorizes"
     campaigns ||--o{ donations : "receives"
     campaigns ||--o{ activities : "has"
+    campaigns ||--o{ receipts : "has"
     campaigns ||--o{ campaign_payment_methods : "has"
     
     donors ||--o{ donations : "makes"

@@ -2,6 +2,8 @@ package campaign
 
 import (
 	"dona_tutti_api/campaign/activity"
+	"dona_tutti_api/campaign/receipts"
+	"dona_tutti_api/donation"
 	"dona_tutti_api/middleware"
 	"dona_tutti_api/s3client"
 	"net/http"
@@ -20,9 +22,11 @@ func NewHandler(service Service, s3Client *s3client.Client) *Handler {
 }
 
 // RegisterRoutes registers all campaign routes with RBAC authorization
-func RegisterRoutes(g *echo.Group, service Service, activityService activity.Service, s3Client *s3client.Client, rbacService middleware.RBACService) {
+func RegisterRoutes(g *echo.Group, service Service, activityService activity.Service, receiptsService receipts.Service, donationService donation.Service, s3Client *s3client.Client, rbacService middleware.RBACService) {
 	handler := NewHandler(service, s3Client)
 	activityHandler := activity.NewHandler(activityService)
+	receiptsHandler := receipts.NewHandler(receiptsService, s3Client)
+	donationHandler := donation.NewHandler(donationService)
 	rbacMiddleware := middleware.NewRBACMiddleware(rbacService)
 
 	// Campaign routes
@@ -30,8 +34,13 @@ func RegisterRoutes(g *echo.Group, service Service, activityService activity.Ser
 
 	// Public routes (no authentication required)
 	campaignGroup.GET("/:id", handler.GetCampaign)
+	campaignGroup.GET("", handler.ListCampaigns)
 	campaignGroup.GET("/:campaignId/activities", activityHandler.GetActivitiesByCampaign)
 	campaignGroup.GET("/:campaignId/activities/:id", activityHandler.GetActivity)
+	campaignGroup.GET("/:campaignId/receipts", receiptsHandler.GetReceiptsByCampaign)
+	campaignGroup.GET("/:campaignId/receipts/:id", receiptsHandler.GetReceipt)
+	campaignGroup.GET("/:campaignId/donations", donationHandler.GetDonationsByCampaign)
+	campaignGroup.GET("/:campaignId/donations/:id", donationHandler.GetDonation)
 
 	// Protected routes with authentication
 	authGroup := campaignGroup.Group("", middleware.RequireAuth())
@@ -40,7 +49,7 @@ func RegisterRoutes(g *echo.Group, service Service, activityService activity.Ser
 	adminGroup := authGroup.Group("", rbacMiddleware.RequireRole("admin"))
 	adminGroup.POST("", handler.CreateCampaign)
 	adminGroup.DELETE("/:id", handler.DeleteCampaign)
-	adminGroup.GET("", handler.ListCampaigns)
+	//adminGroup.GET("", handler.ListCampaigns)
 
 	// Campaign upload routes
 	adminGroup.POST("/:id/upload", handler.UploadCampaignImage)
@@ -49,6 +58,16 @@ func RegisterRoutes(g *echo.Group, service Service, activityService activity.Ser
 	adminGroup.POST("/:campaignId/activities", activityHandler.CreateActivity)
 	adminGroup.PUT("/:campaignId/activities/:id", activityHandler.UpdateActivity)
 	adminGroup.DELETE("/:campaignId/activities/:id", activityHandler.DeleteActivity)
+
+	// Receipts admin routes
+	adminGroup.POST("/:campaignId/receipts", receiptsHandler.CreateReceipt)
+	adminGroup.PUT("/:campaignId/receipts/:id", receiptsHandler.UpdateReceipt)
+	adminGroup.DELETE("/:campaignId/receipts/:id", receiptsHandler.DeleteReceipt)
+	adminGroup.POST("/:campaignId/receipts/:id/upload", receiptsHandler.UploadReceiptDocument)
+
+	// Donations admin routes
+	adminGroup.POST("/:campaignId/donations", donationHandler.CreateDonation)
+	adminGroup.PUT("/:campaignId/donations/:id", donationHandler.UpdateDonation)
 
 	// Admin or owner routes (using Combine for OR logic)
 	adminOrOwnerGroup := authGroup.Group("", rbacMiddleware.Combine(
@@ -151,7 +170,7 @@ func (h *Handler) UpdateCampaign(c echo.Context) error {
 func (h *Handler) UploadCampaignImage(c echo.Context) error {
 	// Check if S3 client is available
 	if h.s3Client == nil {
-		return echo.NewHTTPError(http.StatusServiceUnavailable, 
+		return echo.NewHTTPError(http.StatusServiceUnavailable,
 			"File upload service not available. AWS S3 not configured.")
 	}
 

@@ -12,7 +12,6 @@ type DonationRepository interface {
 	GetDonation(ctx context.Context, id uuid.UUID) (Donation, error)
 	CreateDonation(ctx context.Context, donation Donation) error
 	UpdateDonation(ctx context.Context, donation Donation) error
-	ListDonations(ctx context.Context) ([]Donation, error)
 	ListDonationsByCampaign(ctx context.Context, campaignID uuid.UUID) ([]Donation, error)
 }
 
@@ -62,22 +61,6 @@ func (r *donationRepository) UpdateDonation(ctx context.Context, donation Donati
 		return fmt.Errorf("failed to update donation: %w", err)
 	}
 	return nil
-}
-
-func (r *donationRepository) ListDonations(ctx context.Context) ([]Donation, error) {
-	var models []DonationModel
-	if err := r.db.WithContext(ctx).Preload("Donor").Find(&models).Error; err != nil {
-		return nil, fmt.Errorf("failed to list donations: %w", err)
-	}
-
-	// Get payment method info for all donations
-	r.loadPaymentMethods(ctx, models)
-
-	donations := make([]Donation, len(models))
-	for i, model := range models {
-		donations[i] = model.ToEntity()
-	}
-	return donations, nil
 }
 
 func (r *donationRepository) ListDonationsByCampaign(ctx context.Context, campaignID uuid.UUID) ([]Donation, error) {
