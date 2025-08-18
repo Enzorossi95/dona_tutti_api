@@ -22,6 +22,31 @@ type PaymentMethodInfo struct {
 	Name string `json:"name"`
 }
 
+// DonorResponse represents donor information in donation responses
+type DonorResponse struct {
+	ID        uuid.UUID `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     string    `json:"email,omitempty"`
+	Phone     string    `json:"phone,omitempty"`
+}
+
+type DonorInfo struct {
+	Name     string  `json:"name" validate:"required"`
+	LastName string  `json:"last_name" validate:"required"`
+	Email    *string `json:"email,omitempty"`
+	Phone    *string `json:"phone,omitempty"`
+}
+
+type CreateDonationRequest struct {
+	Amount          float64    `json:"amount"`
+	Message         *string    `json:"message,omitempty"`
+	IsAnonymous     bool       `json:"is_anonymous"`
+	PaymentMethodID int        `json:"payment_method_id"`
+	DonorID         *uuid.UUID `json:"donor_id,omitempty"`
+	Donor           *DonorInfo `json:"donor,omitempty"`
+}
+
 type Donation struct {
 	ID            uuid.UUID          `json:"id"`
 	CampaignID    uuid.UUID          `json:"campaign_id"`
@@ -32,5 +57,6 @@ type Donation struct {
 	IsAnonymous   bool               `json:"is_anonymous"`
 	PaymentMethodID int              `json:"payment_method_id"`
 	PaymentMethod *PaymentMethodInfo `json:"payment_method,omitempty"`
+	Donor         *DonorResponse     `json:"donor,omitempty"`
 	Status        DonationStatus     `json:"status"`
 }

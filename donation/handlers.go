@@ -67,12 +67,12 @@ func (h *Handler) GetDonation(c echo.Context) error {
 
 // CreateDonation creates a new donation
 // @Summary Create a new donation
-// @Description Create a new donation for a campaign
+// @Description Create a new donation for a campaign with donor_id or donor info
 // @Tags donations
 // @Accept json
 // @Produce json
 // @Param campaignId path string true "Campaign ID"
-// @Param donation body Donation true "Donation data"
+// @Param donation body CreateDonationRequest true "Donation data"
 // @Success 201 {object} Donation
 // @Failure 400 {object} map[string]string
 // @Router /campaigns/{campaignId}/donations [post]
@@ -82,20 +82,29 @@ func (h *Handler) CreateDonation(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid campaign ID")
 	}
 
-	var donation Donation
-	if err := c.Bind(&donation); err != nil {
+	var req CreateDonationRequest
+	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	// Ensure the donation is for the correct campaign
-	donation.CampaignID = campaignID
+	if req.DonorID == nil && req.Donor == nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Either donor_id or donor information must be provided")
+	}
 
-	id, err := h.service.CreateDonation(c.Request().Context(), donation)
+	if req.DonorID != nil && req.Donor != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Cannot provide both donor_id and donor information")
+	}
+
+	id, err := h.service.CreateDonationWithRequest(c.Request().Context(), campaignID, req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	donation.ID = id
+	donation, err := h.service.GetDonation(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
 	return c.JSON(http.StatusCreated, donation)
 }
 

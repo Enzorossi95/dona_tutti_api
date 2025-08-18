@@ -125,7 +125,7 @@ func main() {
 	donorService := donor.NewService(donorRepo)
 
 	donationRepo := donation.NewDonationRepository(db)
-	donationService := donation.NewService(donationRepo)
+	donationService := donation.NewService(donationRepo, donorService)
 
 	paymentMethodRepo := paymentmethod.NewRepository(db)
 	paymentMethodService := paymentmethod.NewService(paymentMethodRepo)

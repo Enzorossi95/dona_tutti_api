@@ -548,7 +548,7 @@ Response: 200 OK
 ```http
 GET /api/campaigns/{campaignId}/donations/{id}
 
-Response: 200 OK
+Response: 200 OK (Donación identificada)
 {
   "id": "donation-uuid",
   "campaign_id": "campaign-uuid",
@@ -562,11 +562,37 @@ Response: 200 OK
     "code": "transfer",
     "name": "Bank Transfer"
   },
+  "donor": {
+    "id": "donor-uuid",
+    "first_name": "María",
+    "last_name": "González",
+    "email": "maria@email.com",
+    "phone": "+5491234567890"
+  },
+  "status": "completed"
+}
+
+Response: 200 OK (Donación anónima)
+{
+  "id": "donation-uuid",
+  "campaign_id": "campaign-uuid", 
+  "amount": 100.00,
+  "donor_id": "anonymous-donor-uuid",
+  "date": "2024-06-01T12:00:00Z",
+  "message": "Anonymous donation",
+  "is_anonymous": true,
+  "payment_method": {
+    "id": 1,
+    "code": "transfer",
+    "name": "Bank Transfer"
+  },
   "status": "completed"
 }
 ```
 
 #### Create Donation (Admin Only)
+
+**Opción 1: Con donor_id existente (retrocompatibilidad)**
 ```http
 POST /api/campaigns/{campaignId}/donations
 Authorization: Bearer {token}
@@ -593,6 +619,109 @@ Response: 201 Created
   "status": "pending"
 }
 ```
+
+**Opción 2: Con información de donor (get_or_create)**
+```http
+POST /api/campaigns/{campaignId}/donations
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "amount": 500.00,
+  "donor": {
+    "name": "María",
+    "last_name": "González", 
+    "email": "maria@email.com",
+    "phone": "+5491234567890"
+  },
+  "message": "Donación con información de donor",
+  "is_anonymous": false,
+  "payment_method_id": 1
+}
+
+Response: 201 Created
+{
+  "id": "new-donation-uuid",
+  "campaign_id": "campaign-uuid",
+  "amount": 500.00,
+  "date": "2024-06-01T12:00:00Z",
+  "donor_id": "created-or-found-donor-uuid",
+  "message": "Donación con información de donor",
+  "is_anonymous": false,
+  "payment_method_id": 1,
+  "status": "pending"
+}
+```
+
+**Opción 3: Solo con nombre y apellido (crear nuevo donor)**
+```http
+POST /api/campaigns/{campaignId}/donations
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "amount": 300.00,
+  "donor": {
+    "name": "Carlos",
+    "last_name": "Rodríguez"
+  },
+  "message": "Donación anónima",
+  "is_anonymous": true,
+  "payment_method_id": 2
+}
+
+Response: 201 Created
+{
+  "id": "new-donation-uuid",
+  "campaign_id": "campaign-uuid", 
+  "amount": 300.00,
+  "date": "2024-06-01T12:00:00Z",
+  "donor_id": "new-donor-uuid",
+  "message": "Donación anónima",
+  "is_anonymous": true,
+  "payment_method_id": 2,
+  "status": "pending"
+}
+```
+
+**Opción 4: Donación anónima (sin donor info)**
+```http
+POST /api/campaigns/{campaignId}/donations
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "amount": 150.00,
+  "message": "Donación anónima",
+  "is_anonymous": true,
+  "payment_method_id": 1
+}
+
+Response: 201 Created
+{
+  "id": "new-donation-uuid",
+  "campaign_id": "campaign-uuid",
+  "amount": 150.00,
+  "date": "2024-06-01T12:00:00Z",
+  "donor_id": "anonymous-donor-uuid",
+  "message": "Donación anónima",
+  "is_anonymous": true,
+  "payment_method_id": 1,
+  "status": "pending"
+}
+```
+
+**Validaciones:**
+- **Campos mutuamente excluyentes**: `donor_id` O `donor` O ninguno (donación anónima)
+- **Validación is_anonymous**:
+  - Si NO hay `donor_id` ni `donor` → `is_anonymous` DEBE ser `true`
+  - Si hay `donor_id` o `donor` → `is_anonymous` DEBE ser `false`
+- **En objeto `donor`**: `name` y `last_name` requeridos, `email` y `phone` opcionales
+- **Get_or_create logic**: 
+  - Busca por email primero (si existe)
+  - Si no encuentra, busca por phone (si existe)  
+  - Si no encuentra, crea nuevo donor
+- **Donaciones anónimas**: Se crea un donor temporal con nombre "Anonymous Donor"
 
 #### Update Donation (Admin Only)
 ```http

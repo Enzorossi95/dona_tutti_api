@@ -12,6 +12,8 @@ type Service interface {
 	CreateDonor(ctx context.Context, donor Donor) (uuid.UUID, error)
 	UpdateDonor(ctx context.Context, donor Donor) error
 	ListDonors(ctx context.Context) ([]Donor, error)
+	FindDonorByEmail(ctx context.Context, email string) (Donor, error)
+	FindDonorByPhone(ctx context.Context, phone string) (Donor, error)
 }
 
 type service struct {
@@ -40,4 +42,12 @@ func (s *service) UpdateDonor(ctx context.Context, donor Donor) error {
 
 func (s *service) ListDonors(ctx context.Context) ([]Donor, error) {
 	return s.repo.ListDonors(ctx)
+}
+
+func (s *service) FindDonorByEmail(ctx context.Context, email string) (Donor, error) {
+	return s.repo.FindDonorByEmail(ctx, email)
+}
+
+func (s *service) FindDonorByPhone(ctx context.Context, phone string) (Donor, error) {
+	return s.repo.FindDonorByPhone(ctx, phone)
 }

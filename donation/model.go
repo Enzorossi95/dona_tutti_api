@@ -56,6 +56,17 @@ func (m DonationModel) ToEntity() Donation {
 		}
 	}
 
+	// Convert donor info if available and not anonymous
+	if !m.IsAnonymous && m.Donor.ID != uuid.Nil {
+		donation.Donor = &DonorResponse{
+			ID:        m.Donor.ID,
+			FirstName: m.Donor.FirstName,
+			LastName:  m.Donor.LastName,
+			Email:     m.Donor.Email,
+			Phone:     m.Donor.Phone,
+		}
+	}
+
 	return donation
 }
 

@@ -251,39 +251,151 @@ else
     show_error "No se pudieron obtener las donaciones"
 fi
 
-# 14. Crear una nueva donación (requiere autenticación admin - puede fallar)
-show_test "14. POST /api/campaigns/$CAMPAIGN_ID/donations - Crear donación"
+# 14. Crear donación con donor_id existente (retrocompatibilidad)
+show_test "14. POST /api/campaigns/$CAMPAIGN_ID/donations - Crear donación con donor_id"
 response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations" \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 500.00,
     "donor_id": "550e8400-e29b-41d4-a716-446655440001",
     "payment_method_id": 1,
-    "message": "Donación de prueba mediante API",
+    "message": "Donación con donor_id existente",
     "is_anonymous": false
   }')
 
 if [[ $response == *"id"* ]]; then
-    show_success "Donación creada exitosamente"
+    show_success "Donación con donor_id creada exitosamente"
     show_response "$response"
     DONATION_ID=$(echo "$response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
     echo -e "${GREEN}💾 ID de la donación creada: $DONATION_ID${NC}"
     echo ""
-
-    # 14.1 Verificar donación creada
-    if [ ! -z "$DONATION_ID" ]; then
-        show_test "14.1. GET /api/campaigns/$CAMPAIGN_ID/donations/$DONATION_ID - Verificar donación"
-        verify_response=$(curl -s "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations/$DONATION_ID")
-        if [[ $verify_response == *"Donación de prueba"* ]]; then
-            show_success "Donación verificada correctamente"
-            show_response "$verify_response"
-        else
-            show_error "No se pudo verificar la donación"
-        fi
-    fi
 else
     echo -e "${YELLOW}⚠️  Nota: La creación requiere autenticación admin${NC}"
     show_response "$response"
+fi
+
+# 15. Crear donación con información de donor (get_or_create)
+show_test "15. POST /api/campaigns/$CAMPAIGN_ID/donations - Crear donación con donor info"
+response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 750.00,
+    "donor": {
+      "name": "María",
+      "last_name": "González",
+      "email": "maria.gonzalez@email.com",
+      "phone": "+5491234567890"
+    },
+    "payment_method_id": 1,
+    "message": "Donación con información de donor",
+    "is_anonymous": false
+  }')
+
+if [[ $response == *"id"* ]]; then
+    show_success "Donación con donor info creada exitosamente"
+    show_response "$response"
+    DONATION_ID_2=$(echo "$response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+    echo -e "${GREEN}💾 ID de la donación creada: $DONATION_ID_2${NC}"
+    echo ""
+else
+    echo -e "${YELLOW}⚠️  Nota: La creación requiere autenticación admin${NC}"
+    show_response "$response"
+fi
+
+# 16. Crear donación solo con nombre y apellido (nuevo donor)
+show_test "16. POST /api/campaigns/$CAMPAIGN_ID/donations - Crear donación solo con nombre"
+response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 300.00,
+    "donor": {
+      "name": "Carlos",
+      "last_name": "Rodríguez"
+    },
+    "payment_method_id": 2,
+    "message": "Donación anónima con solo nombre",
+    "is_anonymous": true
+  }')
+
+if [[ $response == *"id"* ]]; then
+    show_success "Donación con donor básico creada exitosamente"
+    show_response "$response"
+else
+    echo -e "${YELLOW}⚠️  Nota: La creación requiere autenticación admin${NC}"
+    show_response "$response"
+fi
+
+# 17. Donación anónima válida (sin donor info, is_anonymous: true)
+show_test "17. POST /api/campaigns/$CAMPAIGN_ID/donations - Donación anónima válida"
+response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100.00,
+    "payment_method_id": 1,
+    "message": "Donación anónima",
+    "is_anonymous": true
+  }')
+
+if [[ $response == *"id"* ]]; then
+    show_success "Donación anónima creada correctamente"
+    show_response "$response"
+else
+    echo -e "${YELLOW}⚠️  Nota: La creación requiere autenticación admin${NC}"
+    show_response "$response"
+fi
+
+# 18. Validación - donación sin donor e is_anonymous: false (debe fallar)
+show_test "18. POST /api/campaigns/$CAMPAIGN_ID/donations - Validación anónima inválida"
+response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100.00,
+    "payment_method_id": 1,
+    "message": "Esta request debería fallar",
+    "is_anonymous": false
+  }')
+
+if [[ $response == *"anonymous donation must have is_anonymous set to true"* ]]; then
+    show_success "Validación de donación anónima funcionando correctamente"
+    show_response "$response"
+else
+    show_error "La validación de donación anónima no está funcionando"
+    show_response "$response"
+fi
+
+# 19. Validación - donación con donor e is_anonymous: true (debe fallar)
+show_test "19. POST /api/campaigns/$CAMPAIGN_ID/donations - Validación donor + anonymous inválida"
+response=$(curl -s -X POST "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 200.00,
+    "donor": {
+      "name": "Test",
+      "last_name": "User"
+    },
+    "payment_method_id": 1,
+    "message": "Esta request debería fallar",
+    "is_anonymous": true
+  }')
+
+if [[ $response == *"donation with donor information cannot be anonymous"* ]]; then
+    show_success "Validación de donor + anonymous funcionando correctamente"
+    show_response "$response"
+else
+    show_error "La validación de donor + anonymous no está funcionando"
+    show_response "$response"
+fi
+
+# 20. Verificar donación con donor_id (si se creó)
+if [ ! -z "$DONATION_ID" ]; then
+    show_test "20. GET /api/campaigns/$CAMPAIGN_ID/donations/$DONATION_ID - Verificar donación"
+    verify_response=$(curl -s "$BASE_URL/api/campaigns/$CAMPAIGN_ID/donations/$DONATION_ID")
+    if [[ $verify_response == *"donor_id existente"* ]]; then
+        show_success "Donación verificada correctamente"
+        show_response "$verify_response"
+    else
+        show_error "No se pudo verificar la donación"
+    fi
 fi
 
 # ============================================================================
@@ -313,7 +425,8 @@ echo "  • GET /api/campaigns/{campaignId}/receipts/{id}"
 echo ""
 echo "  ${YELLOW}Donations (Donaciones):${NC}"
 echo "  • GET /api/campaigns/{campaignId}/donations"
-echo "  • POST /api/campaigns/{campaignId}/donations"
+echo "  • POST /api/campaigns/{campaignId}/donations (con donor_id)"
+echo "  • POST /api/campaigns/{campaignId}/donations (con donor info - get_or_create)"
 echo "  • GET /api/campaigns/{campaignId}/donations/{id}"
 echo ""
 echo "  ${YELLOW}Organizers:${NC}"

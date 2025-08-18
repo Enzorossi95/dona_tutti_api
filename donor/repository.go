@@ -13,6 +13,8 @@ type DonorRepository interface {
 	CreateDonor(ctx context.Context, donor Donor) error
 	UpdateDonor(ctx context.Context, donor Donor) error
 	ListDonors(ctx context.Context) ([]Donor, error)
+	FindDonorByEmail(ctx context.Context, email string) (Donor, error)
+	FindDonorByPhone(ctx context.Context, phone string) (Donor, error)
 }
 
 type donorRepository struct {
@@ -59,4 +61,20 @@ func (r *donorRepository) ListDonors(ctx context.Context) ([]Donor, error) {
 		donors[i] = model.ToEntity()
 	}
 	return donors, nil
+}
+
+func (r *donorRepository) FindDonorByEmail(ctx context.Context, email string) (Donor, error) {
+	var model DonorModel
+	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&model).Error; err != nil {
+		return Donor{}, fmt.Errorf("failed to find donor by email: %w", err)
+	}
+	return model.ToEntity(), nil
+}
+
+func (r *donorRepository) FindDonorByPhone(ctx context.Context, phone string) (Donor, error) {
+	var model DonorModel
+	if err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&model).Error; err != nil {
+		return Donor{}, fmt.Errorf("failed to find donor by phone: %w", err)
+	}
+	return model.ToEntity(), nil
 }
