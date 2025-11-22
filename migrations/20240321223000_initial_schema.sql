@@ -2,15 +2,6 @@
 -- Create extension for UUID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create articles table
-CREATE TABLE IF NOT EXISTS articles (
-    id VARCHAR(50) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Create campaign_categories table
 CREATE TABLE IF NOT EXISTS campaign_categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -69,13 +60,6 @@ INSERT INTO organizers (id, name, avatar, verified) VALUES
     ('660e8400-e29b-41d4-a716-446655440003', 'Water for All', 'https://example.com/avatars/water-for-all.jpg', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Insert sample articles
-INSERT INTO articles (id, title, content) VALUES
-    ('1', 'Primer artículo', 'Contenido del primer artículo'),
-    ('2', 'Segundo artículo', 'Contenido del segundo artículo'),
-    ('3', 'Tercer artículo', 'Contenido del tercer artículo')
-ON CONFLICT (id) DO NOTHING;
-
 -- Insert sample campaigns
 INSERT INTO campaigns (id, title, description, image, goal, start_date, end_date, location, category_id, urgency, organizer_id, status) VALUES
     (
@@ -126,4 +110,3 @@ ON CONFLICT (id) DO NOTHING;
 DROP TABLE IF EXISTS campaigns;
 DROP TABLE IF EXISTS organizers;
 DROP TABLE IF EXISTS campaign_categories;
-DROP TABLE IF EXISTS articles;
