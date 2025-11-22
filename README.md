@@ -31,13 +31,34 @@ cp .env.example .env
 
 ### 2. Iniciar Servicios
 
-```bash
-# Iniciar PostgreSQL y API
-docker-compose up -d
+**Opción A: Usando Makefile (Recomendado)**
 
-# Ver logs
-docker-compose logs -f api
+```bash
+# Desarrollo (DB en puerto 5440, con hot-reload)
+make start-dev
+
+# Producción (DB en puerto 5432)
+make start-prod
+
+# Ver todos los comandos disponibles
+make help
 ```
+
+**Opción B: Usando Docker Compose directamente**
+
+```bash
+# Desarrollo
+DB_PORT_EXTERNAL=5440 docker-compose --profile dev up -d
+
+# Producción
+docker-compose --profile prod up -d
+
+# Ver logs del API
+docker-compose logs -f api        # Producción
+docker-compose logs -f api-dev    # Desarrollo
+```
+
+> ⚠️ **Importante**: No uses solo `docker-compose up -d` sin especificar un perfil, ya que esto solo levantará PostgreSQL sin el servicio API.
 
 ### 3. Probar la API
 
@@ -71,6 +92,22 @@ curl http://localhost:9999/organizers
 - `GET /organizers/:id` - Obtener organizador específico
 
 
+## Perfiles de Entorno
+
+El proyecto utiliza **Docker Compose profiles** para gestionar diferentes entornos:
+
+### Desarrollo (`dev`)
+- Base de datos expuesta en puerto **5440** (configurable con `DB_PORT_EXTERNAL`)
+- Hot-reload habilitado con volúmenes montados
+- Servicio: `api-dev`
+- Configuración LocalStack para S3 (opcional)
+
+### Producción (`prod`)
+- Base de datos expuesta en puerto **5432** (estándar PostgreSQL)
+- Sin hot-reload, imagen optimizada
+- Servicio: `api`
+- Configuración para AWS S3 real
+
 ## Variables de Entorno
 
 | Variable | Descripción | Por Defecto |
@@ -82,21 +119,58 @@ curl http://localhost:9999/organizers
 | `DB_NAME` | Nombre de la base de datos | `microservice_db` |
 | `DB_SSLMODE` | Modo SSL | `disable` |
 | `API_PORT` | Puerto de la API | `9999` |
+| `DB_PORT_EXTERNAL` | Puerto externo de PostgreSQL | `5432` (prod), `5440` (dev) |
 
 ## Comandos Docker
 
+### Usando Makefile (Recomendado)
+
 ```bash
+# Iniciar servicios
+make start-dev          # Desarrollo
+make start-prod         # Producción
+
 # Construir e iniciar servicios
-docker-compose up --build
+make build-dev          # Desarrollo con rebuild
+make build-prod         # Producción con rebuild
 
 # Detener servicios
-docker-compose down
+make stop               # Detiene ambos perfiles
 
 # Ver logs
-docker-compose logs -f
+make logs               # Todos los servicios
+make logs-api           # Solo API
+make logs-db            # Solo base de datos
+
+# Limpiar (detener y eliminar volúmenes)
+make clean
+
+# Ejecutar tests
+make test
+
+# Ver ayuda completa
+make help
+```
+
+### Usando Docker Compose directamente
+
+```bash
+# Construir e iniciar servicios
+docker-compose --profile dev up --build    # Desarrollo
+docker-compose --profile prod up --build   # Producción
+
+# Detener servicios
+docker-compose --profile dev down          # Desarrollo
+docker-compose --profile prod down         # Producción
+
+# Ver logs
+docker-compose logs -f api                 # API Producción
+docker-compose logs -f api-dev             # API Desarrollo
+docker-compose logs -f postgres            # Base de datos
 
 # Reiniciar solo la API
-docker-compose restart api
+docker-compose --profile prod restart api      # Producción
+docker-compose --profile dev restart api-dev   # Desarrollo
 
 # Acceder a la base de datos
 docker-compose exec postgres psql -U microservice_user -d microservice_db
