@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"dona_tutti_api/campaign"
 	"dona_tutti_api/campaign/activity"
+	"dona_tutti_api/campaign/contract"
 	"dona_tutti_api/campaign/receipts"
 	"dona_tutti_api/campaigncategory"
 	"dona_tutti_api/database"
 	"dona_tutti_api/docs"
 	"dona_tutti_api/donation"
 	"dona_tutti_api/donor"
+	appMiddleware "dona_tutti_api/middleware"
 	"dona_tutti_api/migrations"
 	"dona_tutti_api/organizer"
 	"dona_tutti_api/paymentmethod"
@@ -22,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -156,6 +160,23 @@ func main() {
 		log.Printf("📦 Using bucket: %s", s3Client.GetBucketName())
 	}
 
+	// Initialize Contract service
+	var contractService contract.Service
+	if s3Client != nil {
+		contractRepo := contract.NewRepository(db)
+		pdfGenerator := contract.NewPDFGenerator()
+		
+		// Create adapters to avoid import cycles
+		campaignAdapter := &campaignServiceAdapter{service: campaignService}
+		organizerAdapter := &organizerServiceAdapter{service: organizerService}
+		
+		contractService = contract.NewService(contractRepo, pdfGenerator, s3Client, campaignAdapter, organizerAdapter)
+		log.Printf("✅ Contract Service initialized successfully")
+	} else {
+		log.Printf("⚠️  Contract Service Disabled: S3 client is required")
+		contractService = nil
+	}
+
 	// Initialize RBAC service
 	rbacRepo := rbac.NewRepository(db)
 	rbacService := rbac.NewService(rbacRepo)
@@ -168,6 +189,13 @@ func main() {
 	donor.RegisterRoutes(api, donorService)
 	paymentmethod.RegisterRoutes(api, paymentMethodService, rbacService)
 	rbac.RegisterRoutes(api, rbacService)
+	
+	// Register contract routes separately to avoid import cycle
+	if contractService != nil {
+		contractHandler := contract.NewHandler(contractService)
+		authGroup := api.Group("", appMiddleware.RequireAuth())
+		contractHandler.RegisterRoutes(authGroup)
+	}
 
 	// Start server
 	port := os.Getenv("API_PORT")
@@ -199,4 +227,53 @@ func setupDatabase() (*gorm.DB, *sql.DB, error) {
 	}
 
 	return gormDB, sqlDB, nil
+}
+
+// campaignServiceAdapter adapts campaign.Service to contract.CampaignService
+type campaignServiceAdapter struct {
+	service campaign.Service
+}
+
+func (a *campaignServiceAdapter) GetCampaignInfo(ctx context.Context, id uuid.UUID) (contract.CampaignInfo, error) {
+	info, err := a.service.GetCampaignInfo(ctx, id)
+	if err != nil {
+		return contract.CampaignInfo{}, err
+	}
+	return contract.CampaignInfo{
+		ID:          info.ID,
+		Title:       info.Title,
+		Goal:        info.Goal,
+		OrganizerID: info.OrganizerID,
+	}, nil
+}
+
+func (a *campaignServiceAdapter) UpdateStatus(ctx context.Context, campaignID uuid.UUID, status string) error {
+	return a.service.UpdateStatus(ctx, campaignID, status)
+}
+
+func (a *campaignServiceAdapter) GetCampaignTitle(ctx context.Context, campaignID uuid.UUID) (string, error) {
+	return a.service.GetCampaignTitle(ctx, campaignID)
+}
+
+// organizerServiceAdapter adapts organizer.Service to contract.OrganizerService
+type organizerServiceAdapter struct {
+	service organizer.Service
+}
+
+func (a *organizerServiceAdapter) GetOrganizerInfo(ctx context.Context, id uuid.UUID) (contract.OrganizerInfo, error) {
+	info, err := a.service.GetOrganizerInfo(ctx, id)
+	if err != nil {
+		return contract.OrganizerInfo{}, err
+	}
+	return contract.OrganizerInfo{
+		ID:      info.ID,
+		Name:    info.Name,
+		Email:   info.Email,
+		Phone:   info.Phone,
+		Address: info.Address,
+	}, nil
+}
+
+func (a *organizerServiceAdapter) GetOrganizerName(ctx context.Context, organizerID uuid.UUID) (string, error) {
+	return a.service.GetOrganizerName(ctx, organizerID)
 }

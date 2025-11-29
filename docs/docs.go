@@ -22,6 +22,208 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/campaigns/{id}/contract": {
+            "get": {
+                "description": "Retrieves the contract information for a campaign",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contracts"
+                ],
+                "summary": "Get contract for a campaign",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contract information",
+                        "schema": {
+                            "$ref": "#/definitions/contract.CampaignContract"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Contract not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/campaigns/{id}/contract/accept": {
+            "post": {
+                "description": "Records the acceptance of a contract with digital signature metadata",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contracts"
+                ],
+                "summary": "Accept a contract",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Contract acceptance request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/contract.AcceptContractRequestDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contract accepted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/campaigns/{id}/contract/generate": {
+            "post": {
+                "description": "Generates a legal contract PDF using campaign data from database",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contracts"
+                ],
+                "summary": "Generate contract PDF for a campaign",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contract generated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Campaign not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/campaigns/{id}/contract/proof": {
+            "get": {
+                "description": "Retrieves the contract proof with full details for admin review",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contracts"
+                ],
+                "summary": "Get contract proof for admin",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contract proof",
+                        "schema": {
+                            "$ref": "#/definitions/contract.ContractProof"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Contract not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/check-permission": {
             "get": {
                 "security": [
@@ -601,7 +803,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Create a new donation for a campaign",
+                "description": "Create a new donation for a campaign with donor_id or donor info",
                 "consumes": [
                     "application/json"
                 ],
@@ -626,7 +828,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/donation.Donation"
+                            "$ref": "#/definitions/donation.CreateDonationRequest"
                         }
                     }
                 ],
@@ -2486,6 +2688,9 @@ const docTemplate = `{
                 "category": {
                     "type": "string"
                 },
+                "contract_signed": {
+                    "type": "boolean"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2573,6 +2778,91 @@ const docTemplate = `{
                 }
             }
         },
+        "contract.AcceptContractRequestDTO": {
+            "type": "object",
+            "properties": {
+                "organizer_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.AcceptanceMetadata": {
+            "type": "object",
+            "properties": {
+                "ip": {
+                    "type": "string"
+                },
+                "user_agent": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.CampaignContract": {
+            "type": "object",
+            "properties": {
+                "acceptance_metadata": {
+                    "$ref": "#/definitions/contract.AcceptanceMetadata"
+                },
+                "accepted_at": {
+                    "type": "string"
+                },
+                "campaign_id": {
+                    "type": "string"
+                },
+                "contract_hash": {
+                    "type": "string"
+                },
+                "contract_pdf_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "organizer_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.ContractProof": {
+            "type": "object",
+            "properties": {
+                "campaign_title": {
+                    "type": "string"
+                },
+                "contract": {
+                    "$ref": "#/definitions/contract.CampaignContract"
+                },
+                "organizer_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "donation.CreateDonationRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "donor": {
+                    "$ref": "#/definitions/donation.DonorInfo"
+                },
+                "donor_id": {
+                    "type": "string"
+                },
+                "is_anonymous": {
+                    "type": "boolean"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "payment_method_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "donation.Donation": {
             "type": "object",
             "properties": {
@@ -2584,6 +2874,9 @@ const docTemplate = `{
                 },
                 "date": {
                     "type": "string"
+                },
+                "donor": {
+                    "$ref": "#/definitions/donation.DonorResponse"
                 },
                 "donor_id": {
                     "type": "string"
@@ -2622,6 +2915,47 @@ const docTemplate = `{
                 "DonationStatusFailed",
                 "DonationStatusRefunded"
             ]
+        },
+        "donation.DonorInfo": {
+            "type": "object",
+            "required": [
+                "last_name",
+                "name"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "donation.DonorResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
         },
         "donation.PaymentMethodInfo": {
             "type": "object",

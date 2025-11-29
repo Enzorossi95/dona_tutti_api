@@ -12,11 +12,22 @@ import (
 	"github.com/google/uuid"
 )
 
+// CampaignInfo represents minimal campaign information for external packages
+type CampaignInfo struct {
+	ID          uuid.UUID
+	Title       string
+	Goal        float64
+	OrganizerID uuid.UUID
+}
+
 type Service interface {
 	GetCampaign(ctx context.Context, id uuid.UUID) (Campaign, error)
 	ListCampaigns(ctx context.Context) ([]Campaign, error)
 	CreateCampaign(ctx context.Context, campaign Campaign) (uuid.UUID, error)
 	UpdateCampaignImage(ctx context.Context, id uuid.UUID, imageURL string) error
+	UpdateStatus(ctx context.Context, campaignID uuid.UUID, status string) error
+	GetCampaignTitle(ctx context.Context, campaignID uuid.UUID) (string, error)
+	GetCampaignInfo(ctx context.Context, campaignID uuid.UUID) (CampaignInfo, error)
 	GetSummary(ctx context.Context) (Summary, error)
 }
 
@@ -25,6 +36,7 @@ type CampaignRepository interface {
 	ListCampaigns(ctx context.Context) ([]Campaign, error)
 	CreateCampaign(ctx context.Context, campaign Campaign) error
 	UpdateCampaignImage(ctx context.Context, id uuid.UUID, imageURL string) error
+	UpdateStatus(ctx context.Context, campaignID uuid.UUID, status string) error
 	GetSummary(ctx context.Context) (Summary, error)
 }
 
@@ -60,9 +72,14 @@ func (s *service) CreateCampaign(ctx context.Context, campaign Campaign) (uuid.U
 	campaign.ID = uuid.New()
 	campaign.CreatedAt = time.Now()
 
-	// Set default status if not provided
+	// Set default status to draft for new campaigns
 	if campaign.Status == "" {
-		campaign.Status = "active"
+		campaign.Status = StatusDraft
+	}
+
+	// Validate status
+	if !IsValidStatus(campaign.Status) {
+		return uuid.Nil, apierrors.NewFieldValidationError("status", "invalid campaign status")
 	}
 
 	// Validate required fields
@@ -157,4 +174,58 @@ func (s *service) UpdateCampaignImage(ctx context.Context, id uuid.UUID, imageUR
 
 func (s *service) GetSummary(ctx context.Context) (Summary, error) {
 	return s.repo.GetSummary(ctx)
+}
+
+func (s *service) UpdateStatus(ctx context.Context, campaignID uuid.UUID, status string) error {
+	// Validate new status
+	if !IsValidStatus(status) {
+		return apierrors.NewFieldValidationError("status", "invalid campaign status")
+	}
+
+	// Get current campaign
+	campaign, err := s.repo.GetCampaign(ctx, campaignID)
+	if err != nil {
+		return fmt.Errorf("campaign not found: %w", err)
+	}
+
+	// Validate status transition
+	if !CanTransitionTo(campaign.Status, status) {
+		return apierrors.NewFieldValidationError("status",
+			fmt.Sprintf("cannot transition from %s to %s", campaign.Status, status))
+	}
+
+	// Additional validation: cannot transition to active without contract
+	if status == StatusActive && campaign.Status == StatusPendingApproval {
+		// This validation will be handled by the admin approval flow
+		// For now, we just allow the transition
+	}
+
+	// Update status
+	if err := s.repo.UpdateStatus(ctx, campaignID, status); err != nil {
+		return fmt.Errorf("failed to update campaign status: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) GetCampaignTitle(ctx context.Context, campaignID uuid.UUID) (string, error) {
+	campaign, err := s.repo.GetCampaign(ctx, campaignID)
+	if err != nil {
+		return "", fmt.Errorf("campaign not found: %w", err)
+	}
+	return campaign.Title, nil
+}
+
+func (s *service) GetCampaignInfo(ctx context.Context, campaignID uuid.UUID) (CampaignInfo, error) {
+	campaign, err := s.repo.GetCampaign(ctx, campaignID)
+	if err != nil {
+		return CampaignInfo{}, fmt.Errorf("campaign not found: %w", err)
+	}
+
+	return CampaignInfo{
+		ID:          campaign.ID,
+		Title:       campaign.Title,
+		Goal:        campaign.Goal,
+		OrganizerID: campaign.OrganizerID,
+	}, nil
 }

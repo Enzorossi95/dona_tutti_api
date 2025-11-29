@@ -40,6 +40,8 @@ definitions:
         type: string
       category:
         type: string
+      contract_signed:
+        type: boolean
       created_at:
         type: string
       current_situation:
@@ -97,6 +99,61 @@ definitions:
       name:
         type: string
     type: object
+  contract.AcceptContractRequestDTO:
+    properties:
+      organizer_id:
+        type: string
+    type: object
+  contract.AcceptanceMetadata:
+    properties:
+      ip:
+        type: string
+      user_agent:
+        type: string
+    type: object
+  contract.CampaignContract:
+    properties:
+      acceptance_metadata:
+        $ref: '#/definitions/contract.AcceptanceMetadata'
+      accepted_at:
+        type: string
+      campaign_id:
+        type: string
+      contract_hash:
+        type: string
+      contract_pdf_url:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      organizer_id:
+        type: string
+    type: object
+  contract.ContractProof:
+    properties:
+      campaign_title:
+        type: string
+      contract:
+        $ref: '#/definitions/contract.CampaignContract'
+      organizer_name:
+        type: string
+    type: object
+  donation.CreateDonationRequest:
+    properties:
+      amount:
+        type: number
+      donor:
+        $ref: '#/definitions/donation.DonorInfo'
+      donor_id:
+        type: string
+      is_anonymous:
+        type: boolean
+      message:
+        type: string
+      payment_method_id:
+        type: integer
+    type: object
   donation.Donation:
     properties:
       amount:
@@ -105,6 +162,8 @@ definitions:
         type: string
       date:
         type: string
+      donor:
+        $ref: '#/definitions/donation.DonorResponse'
       donor_id:
         type: string
       id:
@@ -132,6 +191,33 @@ definitions:
     - DonationStatusPending
     - DonationStatusFailed
     - DonationStatusRefunded
+  donation.DonorInfo:
+    properties:
+      email:
+        type: string
+      last_name:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    required:
+    - last_name
+    - name
+    type: object
+  donation.DonorResponse:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      phone:
+        type: string
+    type: object
   donation.PaymentMethodInfo:
     properties:
       code:
@@ -605,6 +691,143 @@ info:
   title: Dona Tutti API
   version: "1.0"
 paths:
+  /api/campaigns/{id}/contract:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the contract information for a campaign
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contract information
+          schema:
+            $ref: '#/definitions/contract.CampaignContract'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Contract not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get contract for a campaign
+      tags:
+      - contracts
+  /api/campaigns/{id}/contract/accept:
+    post:
+      consumes:
+      - application/json
+      description: Records the acceptance of a contract with digital signature metadata
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Contract acceptance request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/contract.AcceptContractRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contract accepted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Accept a contract
+      tags:
+      - contracts
+  /api/campaigns/{id}/contract/generate:
+    post:
+      consumes:
+      - application/json
+      description: Generates a legal contract PDF using campaign data from database
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contract generated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Campaign not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Generate contract PDF for a campaign
+      tags:
+      - contracts
+  /api/campaigns/{id}/contract/proof:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the contract proof with full details for admin review
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contract proof
+          schema:
+            $ref: '#/definitions/contract.ContractProof'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Contract not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get contract proof for admin
+      tags:
+      - contracts
   /auth/check-permission:
     get:
       consumes:
@@ -1142,7 +1365,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new donation for a campaign
+      description: Create a new donation for a campaign with donor_id or donor info
       parameters:
       - description: Campaign ID
         in: path
@@ -1154,7 +1377,7 @@ paths:
         name: donation
         required: true
         schema:
-          $ref: '#/definitions/donation.Donation'
+          $ref: '#/definitions/donation.CreateDonationRequest'
       produces:
       - application/json
       responses:

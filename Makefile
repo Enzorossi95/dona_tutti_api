@@ -25,6 +25,10 @@ help:
 	@echo "  make logs-api    - View API logs"
 	@echo "  make logs-db     - View database logs"
 	@echo "  make test        - Run API tests"
+	@echo ""
+	@echo "Documentation:"
+	@echo "  make swagger          - Generate Swagger documentation"
+	@echo "  make swagger-install  - Install swag CLI tool"
 
 # Start commands (without rebuild)
 start-dev:
@@ -74,6 +78,7 @@ db-prod:
 test:
 	./test_api.sh
 
+
 # LocalStack commands
 localstack:
 	@chmod +x localstack.sh
@@ -86,6 +91,9 @@ localstack-stop:
 localstack-status:
 	@chmod +x localstack.sh
 	./localstack.sh status
+
+swag:
+	docker compose exec api-dev swag init
 
 # Development with LocalStack
 dev-local:

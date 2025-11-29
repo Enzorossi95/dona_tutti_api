@@ -58,6 +58,7 @@ func (m CampaignModel) ToEntity() Campaign {
 		CategoryId:  m.CategoryID,
 		Urgency:     m.Urgency,
 		Organizer:   nil, // Will be populated by repository/service if needed
+		OrganizerID: m.OrganizerID,
 		Status:      m.Status,
 	}
 
@@ -106,7 +107,7 @@ func (m *CampaignModel) FromEntity(entity Campaign) {
 	m.Urgency = entity.Urgency
 	m.Status = entity.Status
 	m.CategoryID = entity.CategoryId
-	
+
 	// Extract organizer ID if organizer is provided
 	if entity.Organizer != nil {
 		m.OrganizerID = entity.Organizer.ID
