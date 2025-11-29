@@ -12,6 +12,7 @@ import (
 type Client struct {
 	s3Client   *s3.Client
 	bucketName string
+	endpoint   string
 }
 
 type Config struct {
@@ -57,9 +58,13 @@ func NewClient() (*Client, error) {
 	// Create S3 client
 	s3Client := s3.NewFromConfig(awsConfig, s3Options)
 
+	// Store LocalStack endpoint if present
+	endpoint_s3 := os.Getenv("LOCALSTACK_ENDPOINT_S3")
+
 	return &Client{
 		s3Client:   s3Client,
 		bucketName: cfg.BucketName,
+		endpoint:   endpoint_s3,
 	}, nil
 }
 
@@ -69,6 +74,10 @@ func (c *Client) GetBucketName() string {
 
 func (c *Client) GetS3Client() *s3.Client {
 	return c.s3Client
+}
+
+func (c *Client) GetEndpoint() string {
+	return c.endpoint
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

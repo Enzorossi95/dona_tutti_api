@@ -52,8 +52,15 @@ func (c *Client) Upload(ctx context.Context, req UploadRequest) (*UploadResponse
 		return nil, fmt.Errorf("failed to upload file to S3: %w", err)
 	}
 
-	// Generate public URL
-	url := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", c.bucketName, key)
+	// Generate public URL based on environment
+	var url string
+	if c.endpoint != "" {
+		// LocalStack URL format: http://localhost:4566/bucket/key
+		url = fmt.Sprintf("%s/%s/%s", c.endpoint, c.bucketName, key)
+	} else {
+		// AWS URL format: https://bucket.s3.amazonaws.com/key
+		url = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", c.bucketName, key)
+	}
 
 	return &UploadResponse{
 		URL:      url,
