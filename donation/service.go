@@ -26,6 +26,7 @@ type Service interface {
 // CampaignService defines minimal campaign operations needed by donation service
 type CampaignService interface {
 	GetCampaignTitle(ctx context.Context, campaignID uuid.UUID) (string, error)
+	GetCampaignStatus(ctx context.Context, campaignID uuid.UUID) (string, error)
 }
 
 type service struct {
@@ -151,8 +152,19 @@ func (s *service) GetOrCreateDonor(ctx context.Context, donorInfo DonorInfo) (uu
 }
 
 func (s *service) CreateDonationWithRequest(ctx context.Context, campaignID uuid.UUID, req CreateDonationRequest) (uuid.UUID, error) {
+	// Check if campaign accepts donations (not completed)
+	campaignStatus, err := s.campaignService.GetCampaignStatus(ctx, campaignID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to verify campaign status: %w", err)
+	}
+	if campaignStatus == "completed" {
+		return uuid.Nil, fmt.Errorf("campaign is not accepting donations: campaign has been closed")
+	}
+	if campaignStatus != "active" {
+		return uuid.Nil, fmt.Errorf("campaign is not accepting donations: campaign status is %s", campaignStatus)
+	}
+
 	var donorID uuid.UUID
-	var err error
 
 	if req.DonorID != nil {
 		if req.IsAnonymous {

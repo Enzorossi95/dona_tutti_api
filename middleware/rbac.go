@@ -345,6 +345,13 @@ func (m *RBACMiddleware) checkOwnershipWithConfig(c echo.Context, userID uuid.UU
 	return userID == resourceUUID, nil
 }
 
+// RequireRoleMiddleware is a helper function that creates a middleware requiring a specific role
+// This is useful when you need to create middleware without first creating an RBACMiddleware instance
+func RequireRoleMiddleware(rbacService RBACService, role string) echo.MiddlewareFunc {
+	m := NewRBACMiddleware(rbacService)
+	return m.RequireRole(role)
+}
+
 // SetUserContext sets the user context in the Echo context for RBAC operations
 func (m *RBACMiddleware) SetUserContext() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {

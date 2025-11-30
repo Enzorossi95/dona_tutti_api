@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dona_tutti_api/campaign"
 	"dona_tutti_api/campaign/activity"
+	"dona_tutti_api/campaign/closure"
 	"dona_tutti_api/campaign/contract"
 	"dona_tutti_api/campaign/receipts"
 	"dona_tutti_api/campaigncategory"
@@ -198,6 +199,35 @@ func main() {
 		contractHandler.RegisterRoutes(authGroup)
 	}
 
+	// Initialize Closure service
+	var closureService closure.Service
+	if s3Client != nil {
+		closureRepo := closure.NewRepository(db)
+		closurePDFGenerator := closure.NewPDFGenerator()
+
+		// Create adapters to avoid import cycles
+		closureCampaignAdapter := &closureCampaignServiceAdapter{service: campaignService}
+		closureOrganizerAdapter := &closureOrganizerServiceAdapter{service: organizerService}
+		closureContractAdapter := &closureContractServiceAdapter{service: contractService}
+
+		closureService = closure.NewService(
+			closureRepo,
+			closurePDFGenerator,
+			s3Client,
+			closureCampaignAdapter,
+			closureOrganizerAdapter,
+			closureContractAdapter,
+		)
+		log.Printf("✅ Closure Service initialized successfully")
+
+		// Register closure routes
+		closureHandler := closure.NewHandler(closureService)
+		rbacMiddleware := appMiddleware.NewRBACMiddleware(rbacService)
+		closureHandler.RegisterRoutes(api, appMiddleware.RequireAuth(), rbacMiddleware.RequireRole("admin"))
+	} else {
+		log.Printf("⚠️  Closure Service Disabled: S3 client is required")
+	}
+
 	// Start server
 	port := os.Getenv("API_PORT")
 	if port == "" {
@@ -278,4 +308,50 @@ func (a *organizerServiceAdapter) GetOrganizerInfo(ctx context.Context, id uuid.
 
 func (a *organizerServiceAdapter) GetOrganizerName(ctx context.Context, organizerID uuid.UUID) (string, error) {
 	return a.service.GetOrganizerName(ctx, organizerID)
+}
+
+// closureCampaignServiceAdapter adapts campaign.Service to closure.CampaignServiceInterface
+type closureCampaignServiceAdapter struct {
+	service campaign.Service
+}
+
+func (a *closureCampaignServiceAdapter) GetCampaignForClosure(ctx context.Context, id uuid.UUID) (closure.CampaignInfo, error) {
+	c, err := a.service.GetCampaign(ctx, id)
+	if err != nil {
+		return closure.CampaignInfo{}, err
+	}
+	return closure.CampaignInfo{
+		ID:          c.ID,
+		Title:       c.Title,
+		Goal:        c.Goal,
+		OrganizerID: c.OrganizerID,
+		Status:      c.Status,
+		StartDate:   c.StartDate,
+		EndDate:     c.EndDate,
+	}, nil
+}
+
+func (a *closureCampaignServiceAdapter) UpdateStatus(ctx context.Context, campaignID uuid.UUID, status string) error {
+	return a.service.UpdateStatus(ctx, campaignID, status)
+}
+
+// closureOrganizerServiceAdapter adapts organizer.Service to closure.OrganizerServiceInterface
+type closureOrganizerServiceAdapter struct {
+	service organizer.Service
+}
+
+func (a *closureOrganizerServiceAdapter) GetOrganizerName(ctx context.Context, organizerID uuid.UUID) (string, error) {
+	return a.service.GetOrganizerName(ctx, organizerID)
+}
+
+// closureContractServiceAdapter adapts contract.Service to closure.ContractServiceInterface
+type closureContractServiceAdapter struct {
+	service contract.Service
+}
+
+func (a *closureContractServiceAdapter) HasContract(ctx context.Context, campaignID uuid.UUID) (bool, error) {
+	if a.service == nil {
+		return false, nil
+	}
+	return a.service.HasContract(ctx, campaignID)
 }

@@ -22,6 +22,203 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/campaigns/{id}/audit": {
+            "get": {
+                "description": "Retrieves the public audit report visible to donors",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaign-closure"
+                ],
+                "summary": "Get public audit report for donors",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Public audit report",
+                        "schema": {
+                            "$ref": "#/definitions/closure.PublicAuditReport"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Report not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/campaigns/{id}/audit/download": {
+            "get": {
+                "description": "Redirects to the PDF URL for download",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaign-closure"
+                ],
+                "summary": "Download audit report PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to PDF URL"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Report not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/campaigns/{id}/close": {
+            "post": {
+                "description": "Closes a campaign, generates transparency score and audit report PDF",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaign-closure"
+                ],
+                "summary": "Close a campaign and generate audit report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Closure request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/closure.CloseCampaignRequestDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Closure report",
+                        "schema": {
+                            "$ref": "#/definitions/closure.CampaignClosureReport"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Campaign not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/campaigns/{id}/closure-report": {
+            "get": {
+                "description": "Retrieves the full closure report with all metrics",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "campaign-closure"
+                ],
+                "summary": "Get closure report for a campaign (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Closure report",
+                        "schema": {
+                            "$ref": "#/definitions/closure.CampaignClosureReport"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Report not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/campaigns/{id}/contract": {
             "get": {
                 "description": "Retrieves the contract information for a campaign",
@@ -2858,6 +3055,176 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "closure.CampaignClosureReport": {
+            "type": "object",
+            "properties": {
+                "alerts_count": {
+                    "type": "integer"
+                },
+                "alerts_resolved": {
+                    "type": "integer"
+                },
+                "campaign_goal": {
+                    "type": "number"
+                },
+                "campaign_id": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string"
+                },
+                "closed_by": {
+                    "type": "string"
+                },
+                "closure_reason": {
+                    "type": "string"
+                },
+                "closure_type": {
+                    "$ref": "#/definitions/closure.ClosureType"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "goal_percentage": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "receipts_with_documents": {
+                    "type": "integer"
+                },
+                "report_hash": {
+                    "type": "string"
+                },
+                "report_pdf_url": {
+                    "type": "string"
+                },
+                "total_activities": {
+                    "type": "integer"
+                },
+                "total_donations": {
+                    "type": "integer"
+                },
+                "total_donors": {
+                    "type": "integer"
+                },
+                "total_expenses": {
+                    "type": "number"
+                },
+                "total_raised": {
+                    "type": "number"
+                },
+                "total_receipts": {
+                    "type": "integer"
+                },
+                "transparency_breakdown": {
+                    "$ref": "#/definitions/closure.TransparencyBreakdown"
+                },
+                "transparency_score": {
+                    "type": "number"
+                }
+            }
+        },
+        "closure.CloseCampaignRequestDTO": {
+            "type": "object",
+            "required": [
+                "closure_type"
+            ],
+            "properties": {
+                "closure_type": {
+                    "type": "string",
+                    "enum": [
+                        "goal_reached",
+                        "end_date",
+                        "manual"
+                    ]
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "closure.ClosureType": {
+            "type": "string",
+            "enum": [
+                "goal_reached",
+                "end_date",
+                "manual"
+            ],
+            "x-enum-varnames": [
+                "ClosureTypeGoalReached",
+                "ClosureTypeEndDate",
+                "ClosureTypeManual"
+            ]
+        },
+        "closure.PublicAuditReport": {
+            "type": "object",
+            "properties": {
+                "campaign_goal": {
+                    "type": "number"
+                },
+                "campaign_id": {
+                    "type": "string"
+                },
+                "campaign_title": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string"
+                },
+                "goal_percentage": {
+                    "type": "number"
+                },
+                "organizer_name": {
+                    "type": "string"
+                },
+                "report_pdf_url": {
+                    "type": "string"
+                },
+                "total_donors": {
+                    "type": "integer"
+                },
+                "total_expenses": {
+                    "type": "number"
+                },
+                "total_raised": {
+                    "type": "number"
+                },
+                "transparency_score": {
+                    "type": "number"
+                }
+            }
+        },
+        "closure.TransparencyBreakdown": {
+            "type": "object",
+            "properties": {
+                "activity_score": {
+                    "description": "0-25 pts",
+                    "type": "number"
+                },
+                "alerts_deduction_score": {
+                    "description": "0 to -10 pts",
+                    "type": "number"
+                },
+                "bonus_score": {
+                    "description": "0-10 pts",
+                    "type": "number"
+                },
+                "documentation_score": {
+                    "description": "0-30 pts",
+                    "type": "number"
+                },
+                "goal_progress_score": {
+                    "description": "0-20 pts",
+                    "type": "number"
+                },
+                "timeliness_score": {
+                    "description": "0-15 pts",
+                    "type": "number"
                 }
             }
         },

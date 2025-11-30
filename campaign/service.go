@@ -29,6 +29,7 @@ type Service interface {
 	UpdateStatus(ctx context.Context, campaignID uuid.UUID, status string) error
 	GetCampaignTitle(ctx context.Context, campaignID uuid.UUID) (string, error)
 	GetCampaignInfo(ctx context.Context, campaignID uuid.UUID) (CampaignInfo, error)
+	GetCampaignStatus(ctx context.Context, campaignID uuid.UUID) (string, error)
 	GetSummary(ctx context.Context) (Summary, error)
 }
 
@@ -230,4 +231,12 @@ func (s *service) GetCampaignInfo(ctx context.Context, campaignID uuid.UUID) (Ca
 		OrganizerID: campaign.OrganizerID,
 		Status:      campaign.Status,
 	}, nil
+}
+
+func (s *service) GetCampaignStatus(ctx context.Context, campaignID uuid.UUID) (string, error) {
+	campaign, err := s.repo.GetCampaign(ctx, campaignID)
+	if err != nil {
+		return "", fmt.Errorf("campaign not found: %w", err)
+	}
+	return campaign.Status, nil
 }
