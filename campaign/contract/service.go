@@ -33,6 +33,7 @@ type CampaignInfo struct {
 	Title       string
 	Goal        float64
 	OrganizerID uuid.UUID
+	Status      string
 }
 
 // OrganizerInfo represents minimal organizer information needed for contracts
@@ -99,7 +100,12 @@ func (s *service) GenerateContract(ctx context.Context, campaignID uuid.UUID) (s
 		return "", fmt.Errorf("campaign not found: %w", err)
 	}
 
-	// 3. Validate campaign data
+	// 3. Validate campaign status (must be draft to generate contract)
+	if campaignInfo.Status != "draft" {
+		return "", fmt.Errorf("contract can only be generated for campaigns in draft status, current status: %s", campaignInfo.Status)
+	}
+
+	// 4. Validate campaign data
 	if campaignInfo.Title == "" {
 		return "", fmt.Errorf("campaign must have a title")
 	}
@@ -110,13 +116,13 @@ func (s *service) GenerateContract(ctx context.Context, campaignID uuid.UUID) (s
 		return "", fmt.Errorf("campaign must have an associated organizer")
 	}
 
-	// 4. Fetch organizer info from database
+	// 5. Fetch organizer info from database
 	organizerInfo, err := s.organizerService.GetOrganizerInfo(ctx, campaignInfo.OrganizerID)
 	if err != nil {
 		return "", fmt.Errorf("organizer not found: %w", err)
 	}
 
-	// 5. Validate required organizer data
+	// 6. Validate required organizer data
 	if organizerInfo.Name == "" {
 		return "", fmt.Errorf("organizer must have a name")
 	}
@@ -130,7 +136,7 @@ func (s *service) GenerateContract(ctx context.Context, campaignID uuid.UUID) (s
 		return "", fmt.Errorf("organizer must have an address")
 	}
 
-	// 6. Build contract data from database info
+	// 7. Build contract data from database info
 	data := ContractData{
 		CampaignID:       campaignInfo.ID,
 		CampaignTitle:    campaignInfo.Title,
@@ -143,18 +149,18 @@ func (s *service) GenerateContract(ctx context.Context, campaignID uuid.UUID) (s
 		GeneratedAt:      time.Now(),
 	}
 
-	// 7. Generate PDF
+	// 8. Generate PDF
 	pdfBytes, hash, err := s.pdfGenerator.Generate(data)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to generate PDF: %w", err)
 	}
 
-	// 8. Generate S3 key
+	// 9. Generate S3 key
 	timestamp := time.Now().Unix()
 	key := fmt.Sprintf("contracts/%s/contract-%d.pdf", campaignID, timestamp)
 
-	// 9. Upload to S3
+	// 10. Upload to S3
 	uploadInput := &s3.PutObjectInput{
 		Bucket:      aws.String(s.s3Client.GetBucketName()),
 		Key:         aws.String(key),
@@ -167,7 +173,7 @@ func (s *service) GenerateContract(ctx context.Context, campaignID uuid.UUID) (s
 		return "", fmt.Errorf("failed to upload contract to S3: %w", err)
 	}
 
-	// 10. Generate public URL
+	// 11. Generate public URL
 	var url string
 	if s.s3Client.GetEndpoint() != "" {
 		// LocalStack URL
@@ -177,7 +183,7 @@ func (s *service) GenerateContract(ctx context.Context, campaignID uuid.UUID) (s
 		url = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", s.s3Client.GetBucketName(), key)
 	}
 
-	// 11. Store contract metadata (without acceptance yet)
+	// 12. Store contract metadata (without acceptance yet)
 	contract := CampaignContract{
 		ID:             uuid.New(),
 		CampaignID:     campaignID,
@@ -192,9 +198,14 @@ func (s *service) GenerateContract(ctx context.Context, campaignID uuid.UUID) (s
 		CreatedAt: time.Now(),
 	}
 
-	// 12. Save the contract metadata
+	// 13. Save the contract metadata
 	if err := s.repo.Create(ctx, contract); err != nil {
 		return "", fmt.Errorf("failed to save contract metadata: %w", err)
+	}
+
+	// 14. Update campaign status to pending_approval
+	if err := s.campaignService.UpdateStatus(ctx, campaignID, "pending_approval"); err != nil {
+		return "", fmt.Errorf("failed to update campaign status: %w", err)
 	}
 
 	return url, nil
@@ -222,6 +233,15 @@ func (s *service) AcceptContract(ctx context.Context, req AcceptContractRequest)
 		return fmt.Errorf("contract not found - must generate contract first: %w", err)
 	}
 
+	// Verify campaign status (must be pending_approval to accept contract)
+	campaignInfo, err := s.campaignService.GetCampaignInfo(ctx, req.CampaignID)
+	if err != nil {
+		return fmt.Errorf("campaign not found: %w", err)
+	}
+	if campaignInfo.Status != "pending_approval" {
+		return fmt.Errorf("contract can only be accepted for campaigns in pending_approval status, current status: %s", campaignInfo.Status)
+	}
+
 	// Check if already accepted
 	if !contract.AcceptedAt.IsZero() {
 		return fmt.Errorf("contract already accepted for campaign %s", req.CampaignID)
@@ -239,8 +259,8 @@ func (s *service) AcceptContract(ctx context.Context, req AcceptContractRequest)
 		return fmt.Errorf("failed to update contract with acceptance: %w", err)
 	}
 
-	// Update campaign status to pending_approval
-	if err := s.campaignService.UpdateStatus(ctx, req.CampaignID, "pending_approval"); err != nil {
+	// Update campaign status to active (published)
+	if err := s.campaignService.UpdateStatus(ctx, req.CampaignID, "active"); err != nil {
 		return fmt.Errorf("failed to update campaign status: %w", err)
 	}
 

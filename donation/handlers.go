@@ -147,3 +147,58 @@ func (h *Handler) UpdateDonation(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, donation)
 }
+
+// UpdateDonationStatus updates the status of a donation
+// @Summary Update donation status
+// @Description Update the status of a donation. When status is changed to 'completed', a receipt is automatically generated.
+// @Tags donations
+// @Accept json
+// @Produce json
+// @Param campaignId path string true "Campaign ID"
+// @Param id path string true "Donation ID"
+// @Param status body UpdateDonationStatusRequest true "Status update data"
+// @Success 200 {object} Donation
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Security BearerAuth
+// @Router /campaigns/{campaignId}/donations/{id}/status [patch]
+func (h *Handler) UpdateDonationStatus(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid donation ID")
+	}
+
+	campaignID, err := uuid.Parse(c.Param("campaignId"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid campaign ID")
+	}
+
+	var req UpdateDonationStatusRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate request
+	if err := c.Validate(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	// Update status
+	if err := h.service.UpdateDonationStatus(c.Request().Context(), id, req.Status); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	// Get updated donation
+	donation, err := h.service.GetDonation(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	// Verify campaign ID matches
+	if donation.CampaignID != campaignID {
+		return echo.NewHTTPError(http.StatusBadRequest, "Donation does not belong to the specified campaign")
+	}
+
+	return c.JSON(http.StatusOK, donation)
+}

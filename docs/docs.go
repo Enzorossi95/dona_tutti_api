@@ -972,6 +972,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/campaigns/{campaignId}/donations/{id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the status of a donation. When status is changed to 'completed', a receipt is automatically generated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donations"
+                ],
+                "summary": "Update donation status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Campaign ID",
+                        "name": "campaignId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Donation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status update data",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/donation.UpdateDonationStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/donation.Donation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/campaigns/{campaignId}/receipts": {
             "get": {
                 "description": "Get a list of all receipts for a specific campaign",
@@ -2718,6 +2798,9 @@ const docTemplate = `{
                 "organizer": {
                     "$ref": "#/definitions/organizer.Organizer"
                 },
+                "organizer_id": {
+                    "type": "string"
+                },
                 "payment_methods": {
                     "type": "array",
                     "items": {
@@ -2896,6 +2979,9 @@ const docTemplate = `{
                 "payment_method_id": {
                     "type": "integer"
                 },
+                "receipt_url": {
+                    "type": "string"
+                },
                 "status": {
                     "$ref": "#/definitions/donation.DonationStatus"
                 }
@@ -2968,6 +3054,17 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "donation.UpdateDonationStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/donation.DonationStatus"
                 }
             }
         },

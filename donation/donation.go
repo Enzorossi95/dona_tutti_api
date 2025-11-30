@@ -15,6 +15,16 @@ const (
 	DonationStatusRefunded  DonationStatus = "refunded"
 )
 
+// IsValidStatus checks if a donation status is valid
+func IsValidStatus(status DonationStatus) bool {
+	switch status {
+	case DonationStatusCompleted, DonationStatusPending, DonationStatusFailed, DonationStatusRefunded:
+		return true
+	default:
+		return false
+	}
+}
+
 // PaymentMethodInfo represents payment method information in donation context
 type PaymentMethodInfo struct {
 	ID   int    `json:"id"`
@@ -47,6 +57,10 @@ type CreateDonationRequest struct {
 	Donor           *DonorInfo `json:"donor,omitempty"`
 }
 
+type UpdateDonationStatusRequest struct {
+	Status DonationStatus `json:"status" validate:"required"`
+}
+
 type Donation struct {
 	ID            uuid.UUID          `json:"id"`
 	CampaignID    uuid.UUID          `json:"campaign_id"`
@@ -59,4 +73,5 @@ type Donation struct {
 	PaymentMethod *PaymentMethodInfo `json:"payment_method,omitempty"`
 	Donor         *DonorResponse     `json:"donor,omitempty"`
 	Status        DonationStatus     `json:"status"`
+	ReceiptURL    *string            `json:"receipt_url,omitempty"`
 }

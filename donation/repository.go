@@ -12,6 +12,7 @@ type DonationRepository interface {
 	GetDonation(ctx context.Context, id uuid.UUID) (Donation, error)
 	CreateDonation(ctx context.Context, donation Donation) error
 	UpdateDonation(ctx context.Context, donation Donation) error
+	UpdateReceiptURL(ctx context.Context, id uuid.UUID, receiptURL string) error
 	ListDonationsByCampaign(ctx context.Context, campaignID uuid.UUID) ([]Donation, error)
 }
 
@@ -59,6 +60,16 @@ func (r *donationRepository) UpdateDonation(ctx context.Context, donation Donati
 	model.FromEntity(donation)
 	if err := r.db.WithContext(ctx).Save(&model).Error; err != nil {
 		return fmt.Errorf("failed to update donation: %w", err)
+	}
+	return nil
+}
+
+func (r *donationRepository) UpdateReceiptURL(ctx context.Context, id uuid.UUID, receiptURL string) error {
+	if err := r.db.WithContext(ctx).
+		Model(&DonationModel{}).
+		Where("id = ?", id).
+		Update("receipt_url", receiptURL).Error; err != nil {
+		return fmt.Errorf("failed to update receipt URL: %w", err)
 	}
 	return nil
 }

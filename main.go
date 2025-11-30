@@ -128,9 +128,6 @@ func main() {
 	donorRepo := donor.NewDonorRepository(db)
 	donorService := donor.NewService(donorRepo)
 
-	donationRepo := donation.NewDonationRepository(db)
-	donationService := donation.NewService(donationRepo, donorService)
-
 	paymentMethodRepo := paymentmethod.NewRepository(db)
 	paymentMethodService := paymentmethod.NewService(paymentMethodRepo)
 
@@ -160,16 +157,20 @@ func main() {
 		log.Printf("📦 Using bucket: %s", s3Client.GetBucketName())
 	}
 
+	// Initialize Donation service (requires campaignService and s3Client for receipt generation)
+	donationRepo := donation.NewDonationRepository(db)
+	donationService := donation.NewService(donationRepo, donorService, s3Client, campaignService)
+
 	// Initialize Contract service
 	var contractService contract.Service
 	if s3Client != nil {
 		contractRepo := contract.NewRepository(db)
 		pdfGenerator := contract.NewPDFGenerator()
-		
+
 		// Create adapters to avoid import cycles
 		campaignAdapter := &campaignServiceAdapter{service: campaignService}
 		organizerAdapter := &organizerServiceAdapter{service: organizerService}
-		
+
 		contractService = contract.NewService(contractRepo, pdfGenerator, s3Client, campaignAdapter, organizerAdapter)
 		log.Printf("✅ Contract Service initialized successfully")
 	} else {
@@ -189,7 +190,7 @@ func main() {
 	donor.RegisterRoutes(api, donorService)
 	paymentmethod.RegisterRoutes(api, paymentMethodService, rbacService)
 	rbac.RegisterRoutes(api, rbacService)
-	
+
 	// Register contract routes separately to avoid import cycle
 	if contractService != nil {
 		contractHandler := contract.NewHandler(contractService)
@@ -244,6 +245,7 @@ func (a *campaignServiceAdapter) GetCampaignInfo(ctx context.Context, id uuid.UU
 		Title:       info.Title,
 		Goal:        info.Goal,
 		OrganizerID: info.OrganizerID,
+		Status:      info.Status,
 	}, nil
 }
 

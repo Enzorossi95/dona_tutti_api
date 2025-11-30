@@ -68,6 +68,7 @@ func RegisterRoutes(g *echo.Group, service Service, activityService activity.Ser
 	// Donations admin routes
 	adminGroup.POST("/:campaignId/donations", donationHandler.CreateDonation)
 	adminGroup.PUT("/:campaignId/donations/:id", donationHandler.UpdateDonation)
+	adminGroup.PATCH("/:campaignId/donations/:id/status", donationHandler.UpdateDonationStatus)
 
 	// Admin or owner routes (using Combine for OR logic)
 	adminOrOwnerGroup := authGroup.Group("", rbacMiddleware.Combine(

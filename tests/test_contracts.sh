@@ -107,6 +107,9 @@ echo ""
 # ============================================================================
 echo -e "${YELLOW}📄 PASO 3: GENERAR CONTRATO PDF${NC}"
 echo "========================="
+echo "Estado antes: draft"
+echo "Estado esperado después: pending_approval"
+echo ""
 
 show_test "3.1. POST /campaigns/$CAMPAIGN_ID/contract/generate - Generar contrato PDF"
 response=$(curl -s -X POST "$BASE_URL/campaigns/$CAMPAIGN_ID/contract/generate" \
@@ -117,6 +120,7 @@ if [[ $response == *"contract_url"* ]]; then
     CONTRACT_URL=$(echo "$response" | jq -r '.contract_url')
     show_success "Contrato PDF generado correctamente"
     echo "Contract URL: $CONTRACT_URL"
+    echo "⚠️  Campaña actualizada a estado: pending_approval"
     show_response "$response"
 else
     show_error "No se pudo generar el contrato"
@@ -148,6 +152,9 @@ echo ""
 # ============================================================================
 echo -e "${YELLOW}✍️  PASO 5: ACEPTAR CONTRATO (FIRMA DIGITAL)${NC}"
 echo "========================="
+echo "Estado antes: pending_approval"
+echo "Estado esperado después: active (PUBLICADA)"
+echo ""
 
 show_test "5.1. POST /campaigns/$CAMPAIGN_ID/contract/accept - Firmar contrato digitalmente"
 response=$(curl -s -X POST "$BASE_URL/campaigns/$CAMPAIGN_ID/contract/accept" \
@@ -157,9 +164,9 @@ response=$(curl -s -X POST "$BASE_URL/campaigns/$CAMPAIGN_ID/contract/accept" \
     \"organizer_id\": \"$ORGANIZER_ID\"
   }")
 
-if [[ $response == *"success"* ]] || [[ $response == *"pending_approval"* ]]; then
+if [[ $response == *"success"* ]] || [[ $response == *"active"* ]]; then
     show_success "Contrato aceptado correctamente"
-    echo "Estado esperado: pending_approval"
+    echo "⚠️  Campaña actualizada a estado: active (PUBLICADA)"
     show_response "$response"
 else
     show_error "No se pudo aceptar el contrato"
@@ -170,16 +177,21 @@ echo ""
 # ============================================================================
 echo -e "${YELLOW}🔍 PASO 6: VERIFICAR ESTADO DE LA CAMPAÑA${NC}"
 echo "========================="
+echo "Estado esperado: active (después de aceptar contrato)"
+echo ""
 
 show_test "6.1. GET /campaigns/$CAMPAIGN_ID - Verificar estado de la campaña"
 response=$(curl -s -X GET "$BASE_URL/campaigns/$CAMPAIGN_ID")
 
 campaign_status=$(echo "$response" | jq -r '.status')
-if [[ $campaign_status == "pending_approval" ]]; then
-    show_success "Campaña en estado pending_approval (correcto)"
+if [[ $campaign_status == "active" ]]; then
+    show_success "Campaña en estado active (PUBLICADA - correcto)"
+    echo "Status: $campaign_status"
+elif [[ $campaign_status == "pending_approval" ]]; then
+    show_error "Campaña aún en estado pending_approval (debería estar en active)"
     echo "Status: $campaign_status"
 elif [[ $campaign_status == "draft" ]]; then
-    show_error "Campaña aún en estado draft (debería estar en pending_approval)"
+    show_error "Campaña aún en estado draft (debería estar en active)"
     echo "Status: $campaign_status"
 else
     echo "Status actual: $campaign_status"
@@ -260,16 +272,18 @@ echo "========================="
 echo ""
 echo -e "${GREEN}✅ Flujo completo de contratos probado:${NC}"
 echo "   1. ✓ Autenticación de usuario"
-echo "   2. ✓ Creación de campaña en estado draft"
-echo "   3. ✓ Generación de contrato PDF"
+echo "   2. ✓ Creación de campaña en estado: draft"
+echo "   3. ✓ Generación de contrato PDF → Estado: pending_approval"
 echo "   4. ✓ Visualización del contrato"
-echo "   5. ✓ Aceptación del contrato (firma digital)"
-echo "   6. ✓ Verificación de estado pending_approval"
+echo "   5. ✓ Aceptación del contrato → Estado: active (PUBLICADA)"
+echo "   6. ✓ Verificación de estado active"
 echo "   7. ✓ Visualización del comprobante legal (admin)"
 echo "   8. ✓ Validaciones negativas"
 echo ""
-echo -e "${BLUE}📋 Estados del flujo:${NC}"
-echo "   draft → pending_approval → active"
+echo -e "${BLUE}📋 Flujo de Estados (Transiciones Automáticas):${NC}"
+echo "   1. POST /campaigns          → draft"
+echo "   2. POST /contract/generate  → pending_approval"
+echo "   3. POST /contract/accept    → active (PUBLICADA)"
 echo ""
 echo -e "${PURPLE}🔍 Elementos validados:${NC}"
 echo "   • Firma digital simple (IP + timestamp + user agent)"

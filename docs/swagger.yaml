@@ -60,6 +60,8 @@ definitions:
         type: string
       organizer:
         $ref: '#/definitions/organizer.Organizer'
+      organizer_id:
+        type: string
       payment_methods:
         items:
           $ref: '#/definitions/campaign.CampaignPaymentMethod'
@@ -176,6 +178,8 @@ definitions:
         $ref: '#/definitions/donation.PaymentMethodInfo'
       payment_method_id:
         type: integer
+      receipt_url:
+        type: string
       status:
         $ref: '#/definitions/donation.DonationStatus'
     type: object
@@ -226,6 +230,13 @@ definitions:
         type: integer
       name:
         type: string
+    type: object
+  donation.UpdateDonationStatusRequest:
+    properties:
+      status:
+        $ref: '#/definitions/donation.DonationStatus'
+    required:
+    - status
     type: object
   donor.Donor:
     properties:
@@ -1473,6 +1484,59 @@ paths:
               type: string
             type: object
       summary: Update a donation
+      tags:
+      - donations
+  /campaigns/{campaignId}/donations/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of a donation. When status is changed to 'completed',
+        a receipt is automatically generated.
+      parameters:
+      - description: Campaign ID
+        in: path
+        name: campaignId
+        required: true
+        type: string
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status update data
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/donation.UpdateDonationStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/donation.Donation'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update donation status
       tags:
       - donations
   /campaigns/{campaignId}/receipts:

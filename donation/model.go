@@ -24,6 +24,7 @@ type DonationModel struct {
 	IsAnonymous     bool                `gorm:"column:is_anonymous"`
 	PaymentMethodID int                 `gorm:"column:payment_method_id;not null"`
 	Status          DonationStatus      `gorm:"column:status;type:varchar(20);not null"`
+	ReceiptURL      *string             `gorm:"column:receipt_url;type:varchar(500)"`
 	CreatedAt       time.Time           `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt       time.Time           `gorm:"column:updated_at;autoUpdateTime"`
 	Donor           donor.DonorModel    `gorm:"foreignKey:DonorID"`
@@ -45,6 +46,7 @@ func (m DonationModel) ToEntity() Donation {
 		IsAnonymous:     m.IsAnonymous,
 		PaymentMethodID: m.PaymentMethodID,
 		Status:          m.Status,
+		ReceiptURL:      m.ReceiptURL,
 	}
 
 	// Convert payment method info if available
@@ -80,4 +82,5 @@ func (m *DonationModel) FromEntity(entity Donation) {
 	m.IsAnonymous = entity.IsAnonymous
 	m.PaymentMethodID = entity.PaymentMethodID
 	m.Status = entity.Status
+	m.ReceiptURL = entity.ReceiptURL
 }

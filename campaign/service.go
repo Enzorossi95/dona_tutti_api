@@ -18,6 +18,7 @@ type CampaignInfo struct {
 	Title       string
 	Goal        float64
 	OrganizerID uuid.UUID
+	Status      string
 }
 
 type Service interface {
@@ -227,5 +228,6 @@ func (s *service) GetCampaignInfo(ctx context.Context, campaignID uuid.UUID) (Ca
 		Title:       campaign.Title,
 		Goal:        campaign.Goal,
 		OrganizerID: campaign.OrganizerID,
+		Status:      campaign.Status,
 	}, nil
 }
